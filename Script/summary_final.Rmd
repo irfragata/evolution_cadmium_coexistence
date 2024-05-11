@@ -1,0 +1,3666 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+# Packages and functions
+
+```{r echo=FALSE}
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(car)
+library(fitdistrplus)
+library(tidyr)
+library(tidyverse)
+library(ggtext)
+library(lme4)
+library(lmerTest)
+library(emmeans)
+library(glmmTMB)
+library(ggbreak)
+library(nlme)
+library(cxr)
+library(MASS)
+library(mvtnorm)
+library(DescTools)
+library(phia)
+library(performance)
+library(DHARMa)
+library(effects)
+library(cowplot)
+library(ggeffects)
+library(marginaleffects)
+library(ggtext)
+library(R2admb)
+library(glmmADMB)
+library(Rfast2)
+library(cowplot)
+library(gridExtra)
+library(RColorBrewer)
+library(gamlss)
+library(gamlss.dist)
+library(gamlss.add)
+library(LSAfun)
+
+#install.packages("devtools")
+require(devtools)
+#install_github("RadicalCommEcol/anisoFun")
+library(anisoFun)
+
+theme_ines<-theme(axis.text = element_text(size=14), axis.title = element_text(size=14, face="bold"), legend.text = element_text(size=12), strip.text = element_text(size=14), plot.title = element_text(size=14, face="bold"), panel.grid=element_line(colour="white"), panel.background = element_rect(fill="white") , axis.line = element_line(size = 0.5, linetype = "solid",
+                                   colour = "black"), strip.background = element_rect(fill="white"))
+
+save_plot<-function(dir, width=15, height=10, ...){
+  ggsave(dir, width = width, height = height, units = c("cm"))
+}
+
+
+Env<-c("No cadmium", "Cadmium")
+names(Env)<-c("N", "Cd")
+
+regimeTu<-c("Tu no cadmium", "Tu cadmium")
+names(regimeTu)<-c("SR1", "SR2")
+
+regimeTe<-c("Te no cadmium", "Te cadmium")
+names(regimeTe)<-c("SR4", "SR5")
+```
+
+
+# Importing data and checking
+
+### Importing Competitive ability
+
+```{r}
+ca<-read.csv(file = "./Data/CompetitiveAbility Cd_G40_complete.csv", header=TRUE) # cdata from the competitive ability
+
+str(ca) 
+# Summary of the data to be sure that everything is ok!
+summary(as.factor(ca$FocalSR))
+
+ca$Block2<-as.factor(ca$Block)
+ca$Rep2<-as.factor(ca$Rep)
+ca$Disk2<-as.factor(ca$Disk)
+ca$Leaf2<-as.factor(ca$Leaf)
+ca$Env2<-as.factor(ca$Env)
+ca$FocalSR2<-as.factor(ca$FocalSR)
+ca$CompSR2<-as.factor(ca$CompSR)
+ca$Type2<-as.factor(ca$Type)
+ca$Focal_Female2<-as.factor(ca$Focalfemale)
+
+
+regimeTu<-c("Tu \ncontrol", "Tu evolved \n in cadmium")
+names(regimeTu)<-c("SR1", "SR2")
+
+regimeTe<-c("Te \n control", "Te evolved \n in cadmium")
+names(regimeTe)<-c("SR4", "SR5")
+```
+
+
+#### Creating columns that are needed
+```{r}
+ca$Nr_Focal_Females_Tu_Alive_G0<-sapply(c(1:length(ca$Block)), function(x){
+  if(ca$Focalfemale[x]=="Tu"){
+    if(ca$Type[x]=="INTRA"){
+      a<-ca$Dens[x]-ca$FocalDead[x]-ca$FocalDrowned[x]-ca$FocalMissing[x]
+    }else
+      a<-1-ca$FocalDead[x]-ca$FocalDrowned[x]-ca$FocalMissing[x]
+    
+  }else
+    a<-NA
+})
+
+ca$Nr_Focal_Females_Te_Alive_G0<-sapply(c(1:length(ca$Block)), function(x){
+  if(ca$Focalfemale[x]=="Te"){
+    if(ca$Type[x]=="INTRA"){
+      a<-ca$Dens[x]-ca$FocalDead[x]-ca$FocalDrowned[x]-ca$FocalMissing[x]
+    }else
+      a<-1-ca$FocalDead[x]-ca$FocalDrowned[x]-ca$FocalMissing[x]
+    
+  }else
+    a<-NA
+})
+
+
+ca$Num_Comp_Tu_Alive_G0<-sapply(c(1:length(ca$Block)), function(x){
+  if(ca$Focalfemale[x]=="Te"){
+    if(ca$Type[x]=="INTER"){
+      a<-ca$Dens[x]-ca$NumbDeadComp[x]-1
+    }else
+      a<-NA
+    
+  }else
+    a<-NA
+})
+
+
+ca$Num_Comp_Te_Alive_G0<-sapply(c(1:length(ca$Block)), function(x){
+  if(ca$Focalfemale[x]=="Tu"){
+    if(ca$Type[x]=="INTER"){
+      a<-ca$Dens[x]-ca$NumbDeadComp[x]-1
+    }else
+      a<-NA
+    
+  }else
+    a<-NA
+})
+
+ca$Nr_Focal_Females_G0<-sapply(c(1:length(ca$Block)), function(x){
+    if(ca$Type[x]=="INTRA"){
+      a<-ca$Dens[x]
+    }else
+      a<-1
+
+})
+
+
+
+str(ca)
+summary(ca)
+
+which(ca$Num_Comp_Te_Alive_G0<0)
+which(ca$Num_Comp_Tu_Alive_G0<0)
+which(ca$Nr_Focal_Females_Tu_Alive_G0<0)
+which(ca$Nr_Focal_Females_Te_Alive_G0<0)
+
+ca<-ca[-c(which(ca$Num_Comp_Te_Alive_G0<0),which(ca$Num_Comp_Tu_Alive_G0<0), which(ca$Nr_Focal_Females_Te_Alive_G0<0) ),]
+
+#Creating the columns with the correct number of competitors. For conspecifics its always the same as the density to calculate the growth rate. For heterospecifics its always 1 female with X competitors, and DensFocal2 its also to do the same for the conspecifics 
+
+ca$DensFocal<-sapply(c(1:dim(ca)[1]), function(x){
+  if(ca$Type[x]=="INTRA"){
+    a<-ca$Dens[x]
+  }else if(ca$Type[x]=="INTER"){
+    a<-1
+  }
+  
+  a
+})
+
+ca$DensComp<-sapply(c(1:dim(ca)[1]), function(x){
+  if(ca$Type[x]=="INTRA"){
+    a<-0
+  }else if(ca$Type[x]=="INTER"){
+    a<-ca$Dens[x]-1
+  }
+  
+  a
+})
+
+ca$DensFocal2<-sapply(c(1:dim(ca)[1]), function(x){
+  if(ca$Type[x]=="INTRA"){
+    a<-ca$Dens[x]-1
+  }else if(ca$Type[x]=="INTER"){
+    a<-1
+  }
+  
+  a
+})
+
+ca$DensComp2<-sapply(c(1:dim(ca)[1]), function(x){
+  if(ca$Type[x]=="INTRA"){
+    a<-ca$Dens[x]-1
+  }else if(ca$Type[x]=="INTER"){
+    a<-ca$Dens[x]-1
+  }
+  
+  a
+})
+
+ca$CompSR3<-sapply(c(1:dim(ca)[1]), function(x){
+  if(ca$Type[x]=="INTRA"){
+    a<-ca$FocalSR[x]
+  }else if(ca$Type[x]=="INTER"){
+    a<-ca$CompSR[x]
+  }
+  
+  a
+})
+
+ca$CompSR3<-as.factor(ca$CompSR3)
+```
+
+#### Estimate growth rate
+
+```{r}
+
+ca[,c("Nr_Focal_Females_G0", "Dens", "Type")]
+
+
+ca$GrowthRateOA<-sapply(c(1:length(ca[,1])), function(x){
+  #print(x)
+  if(ca$Focal_Female[x]=="Tu"){
+    a<-ca$TuFemales[x]/ca$DensFocal[x]
+  }else if(ca$Focal_Female[x]=="Te"){
+    a<-ca$TeFemales[x]/ca$DensFocal[x]
+  }else
+    a<-NA
+  
+  a
+})
+
+#Growth rate per day
+ca$GrowthRatePD<-sapply(c(1:dim(ca)[1]), function(x){
+  #print(x)
+  if(ca$Focal_Female[x]=="Tu"){
+    a<-(ca$TuFemales[x]/ca$DensFocal[x])/3
+  }else if(ca$Focal_Female[x]=="Te"){
+    a<-(ca$TeFemales[x]/ca$DensFocal[x])/3
+  }else{
+    a<-NA}
+  
+  
+  a
+})
+
+
+```
+
+### Importing coexistence
+
+```{r}
+coex_g42<-read.csv("./Data/Coexistence Cd_G42_checked.csv", header=TRUE) # Data from the coexistence experiment
+
+coex_g42$Rep2<-as.factor(coex_g42$Rep)
+coex_g42$X1st.pair<-as.factor(coex_g42$X1st_pair)
+coex_g42$X2nd.pair<-as.factor(coex_g42$X2nd_pair)
+coex_g42$SRTu<-as.factor(coex_g42$SRTu)
+coex_g42$SRTe<-as.factor(coex_g42$SRTe)
+coex_g42$Box2<-as.factor(coex_g42$Box)
+
+### summary data per leaf (because the leaflets are not attributable)
+coex_g42_res<-gather(coex_g42, leaf, females, Leaf_2_Up_Tu:Leaf_5_Down_Te, factor_key=TRUE)
+str(coex_g42_res)
+
+coex_g42_res$char<-as.character(coex_g42_res$leaf)
+
+aux4<-as.data.frame(t(as.data.frame(sapply(c(1:length(coex_g42_res$Rep)), function(x){
+  a<-strsplit(coex_g42_res$char[x], split="_")[[1]]
+  
+  c(a[2:4])
+}))))
+
+colnames(aux4)<-c("Leaf2", "Direction", "Species")
+
+coex_g42_res<-cbind(coex_g42_res, aux4)
+
+str(coex_g42_res)
+
+sum_coex_g42<-coex_g42_res %>%
+  group_by(Rep2, SRTu, SRTe, Box2, Leaf2,X1st.pair,X2nd.pair, Direction, Species, Env) %>%
+  summarize(av_females=sum(females, na.rm=TRUE))
+
+sum_coex_g42
+sum_coex_g42$Direction<-as.factor(sum_coex_g42$Direction)
+
+sum_coex_g42_res<-as.data.frame(spread(sum_coex_g42, key=Species, value=av_females))
+
+sum_coex_g42_res2<-sum_coex_g42_res %>%
+  group_by(Rep2, SRTu, SRTe, Box2, Leaf2,X1st.pair,X2nd.pair, Env) %>%
+  summarize(av_Te=sum(Te, na.rm=TRUE), av_Tu=sum(Tu, na.rm=TRUE)) %>% as.data.frame()
+
+str(sum_coex_g42_res2)
+
+sum_coex_g42_res2<-sum_coex_g42_res2[-which(sum_coex_g42_res2$Env=="Heterogeneous"),]
+
+coex_g42_rep<-sum_coex_g42_res2 %>%
+  group_by(Rep2, Leaf2, SRTu, SRTe, Env, Box2) %>%
+  summarize( sum_Te=sum(av_Te, na.rm=TRUE), sum_Tu=mean(av_Tu, na.rm=TRUE)) %>% as.data.frame()
+
+
+coex_g42_rep$Env[which(coex_g42_rep$Env=="Cd")]<-"Cd" 
+
+
+```
+
+
+# 2 - Estimate parameters from cxr package 
+
+cxr accepts a data frame with a first column called fitness with positive values and numeric columns with number of individuals. Each row is one individual. For multiple species the easier is to create a list, each with a data frame that has in the first column number of individuals produced and then the number of neighbours
+
+this case we transformed all 0s into 1 (so that the log is 0) For that we need to add +1 to all data so that the variance is not changed.
+
+Note that the files of the output data are available in the folder. To avoid having the run the code again I added eval = FALSE. To use the already generated ouptut files you just need to import the data. To generate the data again, you need to change eval=TRUE.
+
+# 2.1 - Estimate All replicates together
+
+##### normal
+
+```{r eval=FALSE, include=FALSE}
+dir.create("./Analyses/cxr_normal_REP", showWarnings = FALSE)
+
+# modifying data frame to fit the type of setup that is need for CXR
+forCXR_N<-subset(ca, Env=="N")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales", "TuFemales")]
+
+forCXR_N$Focal<-mapvalues(forCXR_N$FocalSR, c(1,2,4,5), c("SR1", "SR2","SR4","SR5"))
+forCXR_N$CompSR2<-mapvalues(forCXR_N$CompSR, c(1,2,4,5), c("SR1", "SR2","SR4","SR5"))
+
+forCXR_N$Comp<-sapply(c(1:length(forCXR_N[,1])), function(x){
+  if(is.na(forCXR_N$CompSR2[x])){
+    a<- forCXR_N$Focal[x]
+  }else{
+    a<-forCXR_N$CompSR2[x]
+  }
+  
+  a
+})
+
+aux<-data.frame(SR1=rep(0, length(forCXR_N[,1])), SR2=rep(0, length(forCXR_N[,1])), SR4=rep(0, length(forCXR_N[,1])), SR5=rep(0, length(forCXR_N[,1])))
+
+for(i in 1:length(forCXR_N[,1])){
+  #coluna onde por focais
+  colunaF<-which(colnames(aux)==forCXR_N$Focal[i])
+  #coluna onde por competidors
+  colunaC<-which(colnames(aux)==forCXR_N$Comp[i])
+  
+  #if its the same regime
+  if(forCXR_N$Focal[i]==forCXR_N$Comp[i] & forCXR_N$Dens[i]==1){
+    aux[i,colunaF]<-forCXR_N$Dens[i]-1
+    
+  }else if(forCXR_N$Focal[i]==forCXR_N$Comp[i]){
+    aux[i,colunaF]<-forCXR_N$Dens[i]-1
+  }else{ #if it is heterospecific then its -1 for the competitors (because of the focal) and its one for the focal
+    aux[i,colunaC]<-forCXR_N$Dens[i]-1
+    aux[i, colunaF]<-1
+  }
+  
+}
+
+forCXR_N<-cbind(forCXR_N, aux)
+
+forCXR_N$fitness<-sapply(c(1:length(forCXR_N[,1])), function(x){
+  colF<-which(colnames(forCXR_N)==forCXR_N$Focal[x])
+  
+  if(forCXR_N$Focal[x]=="SR1"){
+    a<-forCXR_N$TuFemales[x]/forCXR_N$SR1[x]
+  } else if(forCXR_N$Focal[x]=="SR2"){
+    a<-forCXR_N$TuFemales[x]/forCXR_N$SR2[x]
+  } else if(forCXR_N$Focal[x]=="SR4"){
+    a<-forCXR_N$TeFemales[x]/forCXR_N$SR4[x]
+  } else if(forCXR_N$Focal[x]=="SR5"){
+    a<-forCXR_N$TeFemales[x]/forCXR_N$SR5[x]
+  }
+  
+  a
+})
+
+#removing rows for which there is no data for fitness
+forCXR_N<-forCXR_N[-which(is.na(forCXR_N$fitness)),]
+
+# adding +1 to all data
+#forCXR_N$fitness<-forCXR_N$fitness+1
+
+forCXR_N[which(forCXR_N$fitness=="-Inf" | forCXR_N$fitness=="Inf"),"fitness"]<-0
+
+
+# all data gets +1 because of the 0 problem
+forCXR_N$fitness<-forCXR_N$fitness+1
+
+# vector that tells which are the selection regimes, the columns have to have the same name
+my.reg <- c("SR1", "SR2","SR4","SR5")
+
+# Do list per replicate and environment
+Rep<-list(SR1= subset(forCXR_N, Focal=="SR1")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR2= subset(forCXR_N, Focal=="SR2")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR4= subset(forCXR_N,  Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_N, Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
+
+
+obs.w0<-cxr_pm_multifit(data = Rep,
+                           focal_column = my.reg,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "pairwise",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(lambda = 1,
+                                                 alpha_intra = 0.1,
+                                                 alpha_inter = 0.1),
+                          fixed_terms = NULL,
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+obs.w0$lambda_standard_error
+obs.w0$lambda
+obs.w0$alpha_matrix_standard_error
+
+
+```
+
+rows in the alpha element of the returning list correspond to species i and columns to species j for each αij coefficient.
+
+###### data table summary
+
+```{r eval=FALSE, include=FALSE}
+
+cxr_param_REP<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Environment=c("N"))
+cxr_param_REP$Tu_lambda<-0
+cxr_param_REP$Te_lambda<-0
+cxr_param_REP$Tu_intra<-0
+cxr_param_REP$Te_intra<-0
+cxr_param_REP$Tu_inter<-0
+cxr_param_REP$Te_inter<-0
+
+cxr_param_REP[,"Tu_lambda"]<-obs.w0$lambda[c(1,2,1,2)]
+cxr_param_REP[,"Te_lambda"]<-obs.w0$lambda[c(3,3,4,4)]
+
+cxr_param_REP[,"Tu_intra"]<-rep(c(obs.w0$alpha_matrix[1,1], obs.w0$alpha_matrix[2,2]), 2)
+cxr_param_REP[,"Te_intra"]<-rep(c(obs.w0$alpha_matrix[3,3], obs.w0$alpha_matrix[4,4]), each=2)
+
+cxr_param_REP[,"Tu_inter"]<-c(obs.w0$alpha_matrix[1,3], obs.w0$alpha_matrix[2,3],obs.w0$alpha_matrix[1,4], obs.w0$alpha_matrix[2,4])
+cxr_param_REP[,"Te_inter"]<-c(obs.w0$alpha_matrix[3,1], obs.w0$alpha_matrix[3,2],obs.w0$alpha_matrix[4,1], obs.w0$alpha_matrix[4,2])
+
+### Lower
+
+cxr_param_REP_lower<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Environment=c("N"))
+cxr_param_REP_lower$Tu_lambda<-0
+cxr_param_REP_lower$Te_lambda<-0
+cxr_param_REP_lower$Tu_intra<-0
+cxr_param_REP_lower$Te_intra<-0
+cxr_param_REP_lower$Tu_inter<-0
+cxr_param_REP_lower$Te_inter<-0
+
+cxr_param_REP_lower[,"Tu_lambda"]<-rep(c(obs.w0$lambda[1]-obs.w0$lambda_standard_error[1], obs.w0$lambda[2]-obs.w0$lambda_standard_error[2]), 2)
+cxr_param_REP_lower[,"Te_lambda"]<-rep(c(obs.w0$lambda[3]-obs.w0$lambda_standard_error[3], obs.w0$lambda[4]-obs.w0$lambda_standard_error[4]), each=2)
+
+cxr_param_REP_lower[,"Tu_intra"]<-rep(c(sign(obs.w0$alpha_matrix[1,1])*(abs(obs.w0$alpha_matrix[1,1])-obs.w0$alpha_matrix_standard_error[1,1]), sign(obs.w0$alpha_matrix[2,2])*(abs(obs.w0$alpha_matrix[2,2])-obs.w0$alpha_matrix_standard_error[2,2])), 2)
+cxr_param_REP_lower[,"Te_intra"]<-rep(c(sign(obs.w0$alpha_matrix[3,3])*(abs(obs.w0$alpha_matrix[3,3])-obs.w0$alpha_matrix_standard_error[3,3]), sign(obs.w0$alpha_matrix[4,4])*(abs(obs.w0$alpha_matrix[4,4])-obs.w0$alpha_matrix_standard_error[4,4])), each=2)
+
+
+cxr_param_REP_lower[,"Tu_inter"]<-c(sign(obs.w0$alpha_matrix[1,3])*(abs(obs.w0$alpha_matrix[1,3])-obs.w0$alpha_matrix_standard_error[1,3]), sign(obs.w0$alpha_matrix[2,3])*(abs(obs.w0$alpha_matrix[2,3])-obs.w0$alpha_matrix_standard_error[2,3]),sign(obs.w0$alpha_matrix[1,4])*(abs(obs.w0$alpha_matrix[1,4])-obs.w0$alpha_matrix_standard_error[1,4]), sign(obs.w0$alpha_matrix[2,4])*(abs(obs.w0$alpha_matrix[2,4])-obs.w0$alpha_matrix_standard_error[2,4]))
+cxr_param_REP_lower[,"Te_inter"]<-c(sign(obs.w0$alpha_matrix[3,1])*(abs(obs.w0$alpha_matrix[3,1])-obs.w0$alpha_matrix_standard_error[3,1]), sign(obs.w0$alpha_matrix[3,2])*(abs(obs.w0$alpha_matrix[3,2])-obs.w0$alpha_matrix_standard_error[3,2]),sign(obs.w0$alpha_matrix[4,1])*(abs(obs.w0$alpha_matrix[4,1])-obs.w0$alpha_matrix_standard_error[4,1]), sign(obs.w0$alpha_matrix[4,2])*(abs(obs.w0$alpha_matrix[4,2])-obs.w0$alpha_matrix_standard_error[4,2]))
+
+
+### upper
+
+cxr_param_REP_upper<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Environment=c("N"))
+cxr_param_REP_upper$Tu_lambda<-0
+cxr_param_REP_upper$Te_lambda<-0
+cxr_param_REP_upper$Tu_intra<-0
+cxr_param_REP_upper$Te_intra<-0
+cxr_param_REP_upper$Tu_inter<-0
+cxr_param_REP_upper$Te_inter<-0
+
+cxr_param_REP_upper[,"Tu_lambda"]<-rep(c(obs.w0$lambda[1]+obs.w0$lambda_standard_error[1], obs.w0$lambda[2]+obs.w0$lambda_standard_error[2]), 2)
+cxr_param_REP_upper[,"Te_lambda"]<-rep(c(obs.w0$lambda[3]+obs.w0$lambda_standard_error[3], obs.w0$lambda[4]+obs.w0$lambda_standard_error[4]), each=2)
+
+cxr_param_REP_upper[,"Tu_intra"]<-rep(c(sign(obs.w0$alpha_matrix[1,1])*(abs(obs.w0$alpha_matrix[1,1])+obs.w0$alpha_matrix_standard_error[1,1]), sign(obs.w0$alpha_matrix[2,2])*(abs(obs.w0$alpha_matrix[2,2])+obs.w0$alpha_matrix_standard_error[2,2])), 2)
+cxr_param_REP_upper[,"Te_intra"]<-rep(c(sign(obs.w0$alpha_matrix[3,3])*(abs(obs.w0$alpha_matrix[3,3])+obs.w0$alpha_matrix_standard_error[3,3]), sign(obs.w0$alpha_matrix[4,4])*(abs(obs.w0$alpha_matrix[4,4])+obs.w0$alpha_matrix_standard_error[4,4])), each=2)
+
+
+cxr_param_REP_upper[,"Tu_inter"]<-c(sign(obs.w0$alpha_matrix[1,3])*(abs(obs.w0$alpha_matrix[1,3])+obs.w0$alpha_matrix_standard_error[1,3]), sign(obs.w0$alpha_matrix[2,3])*(abs(obs.w0$alpha_matrix[2,3])+obs.w0$alpha_matrix_standard_error[2,3]),sign(obs.w0$alpha_matrix[1,4])*(abs(obs.w0$alpha_matrix[1,4])+obs.w0$alpha_matrix_standard_error[1,4]), sign(obs.w0$alpha_matrix[2,4])*(abs(obs.w0$alpha_matrix[2,4])+obs.w0$alpha_matrix_standard_error[2,4]))
+cxr_param_REP_upper[,"Te_inter"]<-c(sign(obs.w0$alpha_matrix[3,1])*(abs(obs.w0$alpha_matrix[3,1])+obs.w0$alpha_matrix_standard_error[3,1]), sign(obs.w0$alpha_matrix[3,2])*(abs(obs.w0$alpha_matrix[3,2])+obs.w0$alpha_matrix_standard_error[3,2]),sign(obs.w0$alpha_matrix[4,1])*(abs(obs.w0$alpha_matrix[4,1])+obs.w0$alpha_matrix_standard_error[4,1]), sign(obs.w0$alpha_matrix[4,2])*(abs(obs.w0$alpha_matrix[4,2])+obs.w0$alpha_matrix_standard_error[4,2]))
+
+```
+
+##### Cadmium
+
+```{r eval=FALSE, include=FALSE}
+# modifying data frame to fit the type of setup that is need for CXR
+forCXR_Cd<-subset(ca, Env=="Cd")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales", "TuFemales")]
+
+forCXR_Cd$Focal<-mapvalues(forCXR_Cd$FocalSR, c(1,2,4,5), c("SR1", "SR2","SR4","SR5"))
+forCXR_Cd$CompSR2<-mapvalues(forCXR_Cd$CompSR, c(1,2,4,5), c("SR1", "SR2","SR4","SR5"))
+
+forCXR_Cd$Comp<-sapply(c(1:length(forCXR_Cd[,1])), function(x){
+  if(is.na(forCXR_Cd$CompSR2[x])){
+    a<- forCXR_Cd$Focal[x]
+  }else{
+    a<-forCXR_Cd$CompSR2[x]
+  }
+  
+  a
+})
+
+aux<-data.frame(SR1=rep(0, length(forCXR_Cd[,1])), SR2=rep(0, length(forCXR_Cd[,1])), SR4=rep(0, length(forCXR_Cd[,1])), SR5=rep(0, length(forCXR_Cd[,1])))
+
+for(i in 1:length(forCXR_Cd[,1])){
+  #coluna onde por focais
+  colunaF<-which(colnames(aux)==forCXR_Cd$Focal[i])
+  #coluna onde por competidors
+  colunaC<-which(colnames(aux)==forCXR_Cd$Comp[i])
+  
+  #if its the same regime
+  if(forCXR_Cd$Focal[i]==forCXR_Cd$Comp[i] & forCXR_Cd$Dens[i]==1){
+    aux[i,colunaF]<-forCXR_Cd$Dens[i]-1
+    
+  }else if(forCXR_Cd$Focal[i]==forCXR_Cd$Comp[i]){
+    aux[i,colunaF]<-forCXR_Cd$Dens[i]-1
+  }else{ #if it is heterospecific then its -1 for the competitors (because of the focal) and its one for the focal
+    aux[i,colunaC]<-forCXR_Cd$Dens[i]-1
+    aux[i, colunaF]<-1
+  }
+  
+}
+
+forCXR_Cd<-cbind(forCXR_Cd, aux)
+
+forCXR_Cd$fitness<-sapply(c(1:length(forCXR_Cd[,1])), function(x){
+  colF<-which(colnames(forCXR_Cd)==forCXR_Cd$Focal[x])
+  
+  if(forCXR_Cd$Focal[x]=="SR1"){
+    a<-forCXR_Cd$TuFemales[x]/forCXR_Cd$SR1[x]
+  } else if(forCXR_Cd$Focal[x]=="SR2"){
+    a<-forCXR_Cd$TuFemales[x]/forCXR_Cd$SR2[x]
+  } else if(forCXR_Cd$Focal[x]=="SR4"){
+    a<-forCXR_Cd$TeFemales[x]/forCXR_Cd$SR4[x]
+  } else if(forCXR_Cd$Focal[x]=="SR5"){
+    a<-forCXR_Cd$TeFemales[x]/forCXR_Cd$SR5[x]
+  }
+  
+  a
+})
+
+subset(ca, Env=="Cd" & Rep=="2" & FocalSR==5 &Type=="INTER")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales", "Block")]
+
+#removing rows for which there is no data for fitness
+#forCXR_Cd<-forCXR_Cd[-which(is.na(forCXR_Cd$fitness)),]
+#forCXR_Cd$fitness<-forCXR_Cd$fitness+1
+
+forCXR_Cd[which(forCXR_Cd$fitness=="-Inf" | forCXR_Cd$fitness=="Inf"),"fitness"]<-0
+
+#0 to 1 to mainrain data
+forCXR_Cd<-forCXR_Cd[-which(is.na(forCXR_Cd$fitness)),]
+forCXR_Cd$fitness<-forCXR_Cd$fitness+1
+
+
+
+# vector that tells which are the selection regimes, the columns have to have the same name
+my.reg <- c("SR1", "SR2","SR4","SR5")
+
+# Do list per replicate and environment
+Rep_Cd<-list(SR1= subset(forCXR_Cd, Focal=="SR1")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR2= subset(forCXR_Cd, Focal=="SR2")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR4= subset(forCXR_Cd, Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_Cd, Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
+
+
+obs.Cd_w0<-cxr_pm_multifit(data = Rep_Cd,
+                           focal_column = my.reg,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "pairwise",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(lambda = 1,
+                                                 alpha_intra = 0.1,
+                                                 alpha_inter = 0.1),
+                          fixed_terms = NULL,
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+
+```
+
+
+
+###### data table summary
+
+```{r eval=FALSE, include=FALSE}
+cxr_param_REP_C<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Environment=c("Cd"))
+cxr_param_REP_C$Tu_lambda<-0
+cxr_param_REP_C$Te_lambda<-0
+cxr_param_REP_C$Tu_intra<-0
+cxr_param_REP_C$Te_intra<-0
+cxr_param_REP_C$Tu_inter<-0
+cxr_param_REP_C$Te_inter<-0
+
+cxr_param_REP_C[,"Tu_lambda"]<-obs.Cd_w0$lambda[c(1,2,1,2)]
+cxr_param_REP_C[,"Te_lambda"]<-obs.Cd_w0$lambda[c(3,3,4,4)]
+
+cxr_param_REP_C[,"Tu_intra"]<-rep(c(obs.Cd_w0$alpha_matrix[1,1], obs.Cd_w0$alpha_matrix[2,2]), 2)
+cxr_param_REP_C[,"Te_intra"]<-rep(c(obs.Cd_w0$alpha_matrix[3,3], obs.Cd_w0$alpha_matrix[4,4]), each=2)
+
+cxr_param_REP_C[,"Tu_inter"]<-c(obs.Cd_w0$alpha_matrix[1,3], obs.Cd_w0$alpha_matrix[2,3],obs.Cd_w0$alpha_matrix[1,4], obs.Cd_w0$alpha_matrix[2,4])
+cxr_param_REP_C[,"Te_inter"]<-c(obs.Cd_w0$alpha_matrix[3,1], obs.Cd_w0$alpha_matrix[3,2],obs.Cd_w0$alpha_matrix[4,1], obs.Cd_w0$alpha_matrix[4,2])
+
+### Lower
+
+cxr_param_REP_C_lower<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Environment=c("Cd"))
+cxr_param_REP_C_lower$Tu_lambda<-0
+cxr_param_REP_C_lower$Te_lambda<-0
+cxr_param_REP_C_lower$Tu_intra<-0
+cxr_param_REP_C_lower$Te_intra<-0
+cxr_param_REP_C_lower$Tu_inter<-0
+cxr_param_REP_C_lower$Te_inter<-0
+
+cxr_param_REP_C_lower[,"Tu_lambda"]<-rep(c(obs.Cd_w0$lambda[1]-obs.Cd_w0$lambda_standard_error[1], obs.Cd_w0$lambda[2]-obs.Cd_w0$lambda_standard_error[2]), 2)
+cxr_param_REP_C_lower[,"Te_lambda"]<-rep(c(obs.Cd_w0$lambda[3]-obs.Cd_w0$lambda_standard_error[3], obs.Cd_w0$lambda[4]-obs.Cd_w0$lambda_standard_error[4]), each=2)
+
+
+cxr_param_REP_C_lower[,"Tu_intra"]<-rep(c(obs.Cd_w0$alpha_matrix[1,1]-obs.Cd_w0$alpha_matrix_standard_error[1,1], obs.Cd_w0$alpha_matrix[2,2]-obs.Cd_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_REP_C_lower[,"Te_intra"]<-rep(c(obs.Cd_w0$alpha_matrix[3,3]-obs.Cd_w0$alpha_matrix_standard_error[3,3], obs.Cd_w0$alpha_matrix[4,4]-obs.Cd_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+
+cxr_param_REP_C_lower[,"Tu_inter"]<-c(obs.Cd_w0$alpha_matrix[1,3]-obs.Cd_w0$alpha_matrix_standard_error[1,3],obs.Cd_w0$alpha_matrix[2,3]-obs.Cd_w0$alpha_matrix_standard_error[2,3],obs.Cd_w0$alpha_matrix[1,4]-obs.Cd_w0$alpha_matrix_standard_error[1,4], obs.Cd_w0$alpha_matrix[2,4]-obs.Cd_w0$alpha_matrix_standard_error[2,4])
+
+cxr_param_REP_C_lower[,"Te_inter"]<-c(obs.Cd_w0$alpha_matrix[3,1]-obs.Cd_w0$alpha_matrix_standard_error[3,1], obs.Cd_w0$alpha_matrix[3,2]-obs.Cd_w0$alpha_matrix_standard_error[3,2],obs.Cd_w0$alpha_matrix[4,1]-obs.Cd_w0$alpha_matrix_standard_error[4,1], obs.Cd_w0$alpha_matrix[4,2]-obs.Cd_w0$alpha_matrix_standard_error[4,2])
+
+
+### upper
+
+cxr_param_REP_C_upper<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Environment=c("Cd"))
+cxr_param_REP_C_upper$Tu_lambda<-0
+cxr_param_REP_C_upper$Te_lambda<-0
+cxr_param_REP_C_upper$Tu_intra<-0
+cxr_param_REP_C_upper$Te_intra<-0
+cxr_param_REP_C_upper$Tu_inter<-0
+cxr_param_REP_C_upper$Te_inter<-0
+
+cxr_param_REP_C_upper[,"Tu_lambda"]<-rep(c(obs.Cd_w0$lambda[1]+obs.Cd_w0$lambda_standard_error[1], obs.Cd_w0$lambda[2]+obs.Cd_w0$lambda_standard_error[2]), 2)
+cxr_param_REP_C_upper[,"Te_lambda"]<-rep(c(obs.Cd_w0$lambda[3]+obs.Cd_w0$lambda_standard_error[3], obs.Cd_w0$lambda[4]+obs.Cd_w0$lambda_standard_error[4]), each=2)
+
+cxr_param_REP_C_upper[,"Tu_intra"]<-rep(c(obs.Cd_w0$alpha_matrix[1,1]+obs.Cd_w0$alpha_matrix_standard_error[1,1],obs.Cd_w0$alpha_matrix[2,2]+obs.Cd_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_REP_C_upper[,"Te_intra"]<-rep(c(obs.Cd_w0$alpha_matrix[3,3]+obs.Cd_w0$alpha_matrix_standard_error[3,3], obs.Cd_w0$alpha_matrix[4,4]+obs.Cd_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+
+cxr_param_REP_C_upper[,"Tu_inter"]<-c(obs.Cd_w0$alpha_matrix[1,3]+obs.Cd_w0$alpha_matrix_standard_error[1,3], obs.Cd_w0$alpha_matrix[2,3]+obs.Cd_w0$alpha_matrix_standard_error[2,3],obs.Cd_w0$alpha_matrix[1,4]+obs.Cd_w0$alpha_matrix_standard_error[1,4], obs.Cd_w0$alpha_matrix[2,4]+obs.Cd_w0$alpha_matrix_standard_error[2,4])
+cxr_param_REP_C_upper[,"Te_inter"]<-c(obs.Cd_w0$alpha_matrix[3,1]+obs.Cd_w0$alpha_matrix_standard_error[3,1], obs.Cd_w0$alpha_matrix[3,2]+obs.Cd_w0$alpha_matrix_standard_error[3,2],obs.Cd_w0$alpha_matrix[4,1]+obs.Cd_w0$alpha_matrix_standard_error[4,1], obs.Cd_w0$alpha_matrix[4,2]+obs.Cd_w0$alpha_matrix_standard_error[4,2])
+
+cxr_param_REP_C_lower
+cxr_param_REP_C_upper
+
+```
+
+###### joining data frame
+
+```{r eval=FALSE, include=FALSE}
+param_all_REP<-as.data.frame(rbind(cxr_param_REP, cxr_param_REP_C))
+
+param_all_REP_lower<-as.data.frame(rbind(cxr_param_REP_lower, cxr_param_REP_C_lower))
+param_all_REP_upper<-as.data.frame(rbind(cxr_param_REP_upper, cxr_param_REP_C_upper))
+
+
+param_all_REP_lower
+param_all_REP_upper
+
+write.csv(param_all_REP, "./Analyses/cxr_normal_REP/parameters_cxr_normal_REP.csv")
+write.csv(param_all_REP_upper, "./Analyses/cxr_normal_REP/parameters_cxr_normal_REP_upper.csv")
+write.csv(param_all_REP_lower, "./Analyses/cxr_normal_REP/parameters_cxr_normal_REP_lower.csv")
+```
+
+###### Importing data files
+
+To use the data sets already available in the repository, we can simply read the csv. 
+```{r}
+## Importing
+param_all_REP<-read.csv("./Analyses/cxr_normal_REP/parameters_cxr_normal_REP.csv")
+param_all_REP_upper<-read.csv("./Analyses/cxr_normal_REP/parameters_cxr_normal_REP_upper.csv")
+param_all_REP_lower<-read.csv( "./Analyses/cxr_normal_REP/parameters_cxr_normal_REP_lower.csv")
+param_all_REP<-param_all_REP[,-1]
+param_all_REP_upper<-param_all_REP_upper[,-1]
+param_all_REP_lower<-param_all_REP_lower[,-1]
+```
+
+
+Data wrangling to make it easier to plot the figures
+
+```{r}
+
+param_all_REP_long<-gather(param_all_REP, parameter, value,Tu_lambda:Te_inter )
+
+param_all_REP_long$category<-mapvalues(param_all_REP_long$parameter, c("Tu_lambda", "Te_lambda", "Tu_intra", "Te_intra","Tu_inter", "Te_inter"), c("lambda", "lambda", "intra", "intra", "inter", "inter"))
+
+param_all_REP_lower_long<-gather(param_all_REP_lower, parameter, value,Tu_lambda:Te_inter )
+
+param_all_REP_lower_long$category<-mapvalues(param_all_REP_lower_long$parameter, c("Tu_lambda", "Te_lambda", "Tu_intra", "Te_intra","Tu_inter", "Te_inter"), c("lambda", "lambda", "intra", "intra", "inter", "inter"))
+
+param_all_REP_upper_long<-gather(param_all_REP_upper, parameter, value,Tu_lambda:Te_inter )
+
+param_all_REP_upper_long$category<-mapvalues(param_all_REP_upper_long$parameter, c("Tu_lambda", "Te_lambda", "Tu_intra", "Te_intra","Tu_inter", "Te_inter"), c("lambda", "lambda", "intra", "intra", "inter", "inter"))
+
+colnames(param_all_REP_lower_long)[5]<-"lower"
+colnames(param_all_REP_upper_long)[5]<-"upper"
+
+str(param_all_REP_long)
+
+param_all_REP_long<-cbind(param_all_REP_long[,1:6],param_all_REP_lower_long$lower, param_all_REP_upper_long$upper)
+
+colnames(param_all_REP_long)[7:8]<-c("lower","upper")
+str(param_all_REP_long)
+```
+
+# 2.2 - Estimate each replicate separately
+
+##### normal
+
+```{r eval=FALSE, include=FALSE}
+dir.create("./Analyses/cxr_normal", showWarnings = FALSE)
+
+# modifying data frame to fit the type of setup that is need for CXR
+forCXR_N<-subset(ca, Env=="N")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales", "TuFemales")]
+
+forCXR_N$Focal<-mapvalues(forCXR_N$FocalSR, c(1,2,4,5), c("SR1", "SR2","SR4","SR5"))
+forCXR_N$CompSR2<-mapvalues(forCXR_N$CompSR, c(1,2,4,5), c("SR1", "SR2","SR4","SR5"))
+
+forCXR_N$Comp<-sapply(c(1:length(forCXR_N[,1])), function(x){
+  if(is.na(forCXR_N$CompSR2[x])){
+    a<- forCXR_N$Focal[x]
+  }else{
+    a<-forCXR_N$CompSR2[x]
+  }
+  
+  a
+})
+
+aux<-data.frame(SR1=rep(0, length(forCXR_N[,1])), SR2=rep(0, length(forCXR_N[,1])), SR4=rep(0, length(forCXR_N[,1])), SR5=rep(0, length(forCXR_N[,1])))
+
+for(i in 1:length(forCXR_N[,1])){
+  #coluna onde por focais
+  colunaF<-which(colnames(aux)==forCXR_N$Focal[i])
+  #coluna onde por competidors
+  colunaC<-which(colnames(aux)==forCXR_N$Comp[i])
+  
+  #if its the same regime
+  if(forCXR_N$Focal[i]==forCXR_N$Comp[i] & forCXR_N$Dens[i]==1){
+    aux[i,colunaF]<-forCXR_N$Dens[i]-1
+    
+  }else if(forCXR_N$Focal[i]==forCXR_N$Comp[i]){
+    aux[i,colunaF]<-forCXR_N$Dens[i]-1
+  }else{ #if it is heterospecific then its -1 for the competitors (because of the focal) and its one for the focal
+    aux[i,colunaC]<-forCXR_N$Dens[i]-1
+    aux[i, colunaF]<-1
+  }
+  
+}
+
+forCXR_N<-cbind(forCXR_N, aux)
+
+forCXR_N$fitness<-sapply(c(1:length(forCXR_N[,1])), function(x){
+  colF<-which(colnames(forCXR_N)==forCXR_N$Focal[x])
+  
+  if(forCXR_N$Focal[x]=="SR1"){
+    a<-forCXR_N$TuFemales[x]/forCXR_N$SR1[x]
+  } else if(forCXR_N$Focal[x]=="SR2"){
+    a<-forCXR_N$TuFemales[x]/forCXR_N$SR2[x]
+  } else if(forCXR_N$Focal[x]=="SR4"){
+    a<-forCXR_N$TeFemales[x]/forCXR_N$SR4[x]
+  } else if(forCXR_N$Focal[x]=="SR5"){
+    a<-forCXR_N$TeFemales[x]/forCXR_N$SR5[x]
+  }
+  
+  a
+})
+
+#removing rows for which there is no data for fitness
+forCXR_N<-forCXR_N[-which(is.na(forCXR_N$fitness)),]
+
+# adding +1 to all data
+#forCXR_N$fitness<-forCXR_N$fitness+1
+
+forCXR_N[which(forCXR_N$fitness=="-Inf" | forCXR_N$fitness=="Inf"),"fitness"]<-0
+
+
+# all data gets +1 because of the 0 problem
+forCXR_N$fitness<-forCXR_N$fitness+1
+
+# vector that tells which are the selection regimes, the columns have to have the same name
+my.reg <- c("SR1", "SR2","SR4","SR5")
+
+# Do list per replicate and environment
+R1<-list(SR1= subset(forCXR_N, Rep==1 & Focal=="SR1")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR2= subset(forCXR_N, Rep==1 & Focal=="SR2")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR4= subset(forCXR_N, Rep==1 & Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_N, Rep==1 & Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
+
+R2<-list(SR1= subset(forCXR_N, Rep==2 & Focal=="SR1")[,c("fitness", "SR1", "SR4", "SR5")], SR4= subset(forCXR_N, Rep==2 & Focal=="SR4")[,c("fitness", "SR1", "SR4", "SR5")], SR5= subset(forCXR_N, Rep==2 & Focal=="SR5")[,c("fitness", "SR1", "SR4", "SR5")])
+
+R3<-list(SR1= subset(forCXR_N, Rep==3 & Focal=="SR1")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR2= subset(forCXR_N, Rep==3 & Focal=="SR2")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR4= subset(forCXR_N, Rep==3 & Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_N, Rep==3 & Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
+
+R4<-list(SR1= subset(forCXR_N, Rep==4 & Focal=="SR1")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR2= subset(forCXR_N, Rep==4 & Focal=="SR2")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR4= subset(forCXR_N, Rep==4 & Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_N, Rep==4 & Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
+
+R5<-list(SR1= subset(forCXR_N, Rep==5 & Focal=="SR1")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR2= subset(forCXR_N, Rep==5 & Focal=="SR2")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR4= subset(forCXR_N, Rep==5 & Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_N, Rep==5 & Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
+
+
+obs.R1_w0<-cxr_pm_multifit(data = R1,
+                           focal_column = my.reg,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "pairwise",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(lambda = 1,
+                                                 alpha_intra = 0.1,
+                                                 alpha_inter = 0.1),
+                          fixed_terms = NULL,
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+str(obs.R1_w0)
+obs.R1_w0$lambda_standard_error
+obs.R1_w0$alpha_matrix_standard_error
+
+
+
+obs.R3_w0<-cxr_pm_multifit(data = R3,
+                           focal_column = my.reg,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "pairwise",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(lambda = 1,
+                                                 alpha_intra = 0.1,
+                                                 alpha_inter = 0.1),
+                          fixed_terms = NULL,
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+obs.R4_w0<-cxr_pm_multifit(data = R4,
+                           focal_column = my.reg,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "pairwise",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(lambda = 1,
+                                                 alpha_intra = 0.1,
+                                                 alpha_inter = 0.1),
+                          fixed_terms = NULL,
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+obs.R5_w0<-cxr_pm_multifit(data = R5,
+                           focal_column = my.reg,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "pairwise",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(lambda = 1,
+                                                 alpha_intra = 0.1,
+                                                 alpha_inter = 0.1),
+                          fixed_terms = NULL,
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+summary(obs.R1_w0)
+summary(obs.R3_w0)
+summary(obs.R4_w0)
+summary(obs.R5_w0)
+
+
+# For replicate 2 we need to do it differently
+
+
+obs.R2_w0_sr1<-cxr_pm_fit(data = R2[[1]],
+                           focal_column = my.reg[1],
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "pairwise",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(lambda = 1,
+                                                 alpha_intra = 0.1,
+                                                 alpha_inter = 0.1),
+                          fixed_terms = NULL,
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+obs.R2_w0_sr4<-cxr_pm_fit(data = R2[[2]][which(R2[[2]][,"SR1"]==0),c("fitness", "SR4")],
+                           focal_column =NULL,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "global",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(lambda = 1,
+                                                 alpha_inter = 0.1),
+                          fixed_terms = NULL,
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+obs.R2_w0_sr4_inter<-cxr_pm_fit(data = R2[[2]][which(R2[[2]][,"SR1"]!=0),c("fitness", "SR4")],
+                           focal_column =NULL,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "global",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(alpha_inter = 0.1),
+                          fixed_terms = list(lambda=obs.R2_w0_sr4$lambda),
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+obs.R2_w0_sr5<-cxr_pm_fit(data = R2[[3]][which(R2[[3]][,"SR1"]==0),c("fitness", "SR5")],
+                           focal_column =NULL,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "global",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(lambda = 1,
+                                                 alpha_inter = 0.1),
+                          fixed_terms = NULL,
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+obs.R2_w0_sr5_inter<-cxr_pm_fit(data = R2[[3]][which(R2[[3]][,"SR1"]!=0),c("fitness", "SR5")],
+                           focal_column =NULL,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "global",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(alpha_inter = 0.1),
+                          fixed_terms = list(lambda=obs.R2_w0_sr5$lambda),
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+
+#ab<-abundance_projection(obs.R1_w0, timesteps = 1, initial_abundances = c(3,3,3,3))
+
+```
+
+rows in the alpha element of the returning list correspond to species i and columns to species j for each αij coefficient.
+
+###### data table summary
+
+```{r eval=FALSE, include=FALSE}
+
+cxr_param_w0<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Replicate=c(1,2,3,4,5), Environment=c("N"))
+cxr_param_w0$Tu_lambda<-0
+cxr_param_w0$Te_lambda<-0
+cxr_param_w0$Tu_intra<-0
+cxr_param_w0$Te_intra<-0
+cxr_param_w0$Tu_inter<-0
+cxr_param_w0$Te_inter<-0
+
+#removing SR2 for replicate 2
+cxr_param_w0<-cxr_param_w0[-which(cxr_param_w0$Replicate==2 & cxr_param_w0$Tu_Regime=="SR2"),]
+
+
+cxr_param_w0[which(cxr_param_w0$Replicate==1),"Tu_lambda"]<-obs.R1_w0$lambda[1:2]
+cxr_param_w0[which(cxr_param_w0$Replicate==1),"Te_lambda"]<-obs.R1_w0$lambda[c(3,3,4,4)]
+
+cxr_param_w0[which(cxr_param_w0$Replicate==2),"Tu_lambda"]<-obs.R2_w0_sr1$lambda
+cxr_param_w0[which(cxr_param_w0$Replicate==2),"Te_lambda"]<-c(obs.R2_w0_sr4$lambda,obs.R2_w0_sr5$lambda)
+
+cxr_param_w0[which(cxr_param_w0$Replicate==3),"Tu_lambda"]<-obs.R3_w0$lambda[1:2]
+cxr_param_w0[which(cxr_param_w0$Replicate==3),"Te_lambda"]<-obs.R3_w0$lambda[c(3,3,4,4)]
+
+cxr_param_w0[which(cxr_param_w0$Replicate==4),"Tu_lambda"]<-obs.R4_w0$lambda[1:2]
+cxr_param_w0[which(cxr_param_w0$Replicate==4),"Te_lambda"]<-obs.R4_w0$lambda[c(3,3,4,4)]
+
+cxr_param_w0[which(cxr_param_w0$Replicate==5),"Tu_lambda"]<-obs.R5_w0$lambda[1:2]
+cxr_param_w0[which(cxr_param_w0$Replicate==5),"Te_lambda"]<-obs.R5_w0$lambda[c(3,3,4,4)]
+
+
+cxr_param_w0[which(cxr_param_w0$Replicate==1),"Tu_intra"]<-rep(c(obs.R1_w0$alpha_matrix[1,1], obs.R1_w0$alpha_matrix[2,2]), 2)
+cxr_param_w0[which(cxr_param_w0$Replicate==1),"Te_intra"]<-rep(c(obs.R1_w0$alpha_matrix[3,3], obs.R1_w0$alpha_matrix[4,4]), each=2)
+
+cxr_param_w0[which(cxr_param_w0$Replicate==2),"Tu_intra"]<-obs.R2_w0_sr1$alpha_intra
+cxr_param_w0[which(cxr_param_w0$Replicate==2),"Te_intra"]<-c(obs.R2_w0_sr4$alpha_inter, obs.R2_w0_sr5$alpha_inter)
+
+cxr_param_w0[which(cxr_param_w0$Replicate==3),"Tu_intra"]<-rep(c(obs.R3_w0$alpha_matrix[1,1], obs.R3_w0$alpha_matrix[2,2]), 2)
+cxr_param_w0[which(cxr_param_w0$Replicate==3),"Te_intra"]<-rep(c(obs.R3_w0$alpha_matrix[3,3], obs.R3_w0$alpha_matrix[4,4]), each=2)
+
+cxr_param_w0[which(cxr_param_w0$Replicate==4),"Tu_intra"]<-rep(c(obs.R4_w0$alpha_matrix[1,1], obs.R4_w0$alpha_matrix[2,2]), 2)
+cxr_param_w0[which(cxr_param_w0$Replicate==4),"Te_intra"]<-rep(c(obs.R4_w0$alpha_matrix[3,3], obs.R4_w0$alpha_matrix[4,4]), each=2)
+
+cxr_param_w0[which(cxr_param_w0$Replicate==5),"Tu_intra"]<-rep(c(obs.R5_w0$alpha_matrix[1,1], obs.R5_w0$alpha_matrix[2,2]), 2)
+cxr_param_w0[which(cxr_param_w0$Replicate==5),"Te_intra"]<-rep(c(obs.R5_w0$alpha_matrix[3,3], obs.R5_w0$alpha_matrix[4,4]), each=2)
+
+
+cxr_param_w0[which(cxr_param_w0$Replicate==1),"Tu_inter"]<-c(obs.R1_w0$alpha_matrix[1,3], obs.R1_w0$alpha_matrix[2,3],obs.R1_w0$alpha_matrix[1,4], obs.R1_w0$alpha_matrix[2,4])
+cxr_param_w0[which(cxr_param_w0$Replicate==1),"Te_inter"]<-c(obs.R1_w0$alpha_matrix[3,1], obs.R1_w0$alpha_matrix[3,2],obs.R1_w0$alpha_matrix[4,1], obs.R1_w0$alpha_matrix[4,2])
+
+cxr_param_w0[which(cxr_param_w0$Replicate==2),"Tu_inter"]<-obs.R2_w0_sr1$alpha_inter
+cxr_param_w0[which(cxr_param_w0$Replicate==2),"Te_inter"]<-c(obs.R2_w0_sr4_inter$alpha_inter, obs.R2_w0_sr5_inter$alpha_inter)
+
+cxr_param_w0[which(cxr_param_w0$Replicate==3),"Tu_inter"]<-c(obs.R3_w0$alpha_matrix[1,3], obs.R3_w0$alpha_matrix[2,3],obs.R3_w0$alpha_matrix[1,4], obs.R3_w0$alpha_matrix[2,4])
+cxr_param_w0[which(cxr_param_w0$Replicate==3),"Te_inter"]<-c(obs.R3_w0$alpha_matrix[3,1], obs.R3_w0$alpha_matrix[3,2],obs.R3_w0$alpha_matrix[4,1], obs.R3_w0$alpha_matrix[4,2])
+
+cxr_param_w0[which(cxr_param_w0$Replicate==4),"Tu_inter"]<-c(obs.R4_w0$alpha_matrix[1,3], obs.R4_w0$alpha_matrix[2,3],obs.R4_w0$alpha_matrix[1,4], obs.R4_w0$alpha_matrix[2,4])
+cxr_param_w0[which(cxr_param_w0$Replicate==4),"Te_inter"]<-c(obs.R4_w0$alpha_matrix[3,1], obs.R4_w0$alpha_matrix[3,2],obs.R4_w0$alpha_matrix[4,1], obs.R4_w0$alpha_matrix[4,2])
+
+cxr_param_w0[which(cxr_param_w0$Replicate==5),"Tu_inter"]<-c(obs.R5_w0$alpha_matrix[1,3], obs.R5_w0$alpha_matrix[2,3],obs.R5_w0$alpha_matrix[1,4], obs.R5_w0$alpha_matrix[2,4])
+cxr_param_w0[which(cxr_param_w0$Replicate==5),"Te_inter"]<-c(obs.R5_w0$alpha_matrix[3,1], obs.R5_w0$alpha_matrix[3,2],obs.R5_w0$alpha_matrix[4,1], obs.R5_w0$alpha_matrix[4,2])
+
+### Lower
+
+cxr_param_w0_lower<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Replicate=c(1,2,3,4,5), Environment=c("N"))
+cxr_param_w0_lower$Tu_lambda<-0
+cxr_param_w0_lower$Te_lambda<-0
+cxr_param_w0_lower$Tu_intra<-0
+cxr_param_w0_lower$Te_intra<-0
+cxr_param_w0_lower$Tu_inter<-0
+cxr_param_w0_lower$Te_inter<-0
+
+#removing SR2 for replicate 2
+cxr_param_w0_lower<-cxr_param_w0_lower[-which(cxr_param_w0_lower$Replicate==2 & cxr_param_w0_lower$Tu_Regime=="SR2"),]
+
+
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==1),"Tu_lambda"]<-rep(c(obs.R1_w0$lambda[1]-obs.R1_w0$lambda_standard_error[1], obs.R1_w0$lambda[2]-obs.R1_w0$lambda_standard_error[2]), 2)
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==1),"Te_lambda"]<-rep(c(obs.R1_w0$lambda[3]-obs.R1_w0$lambda_standard_error[3], obs.R1_w0$lambda[4]-obs.R1_w0$lambda_standard_error[4]), each=2)
+
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==2),"Tu_lambda"]<-obs.R2_w0_sr1$lambda-obs.R2_w0_sr1$lambda_standard_error
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==2),"Te_lambda"]<-c(obs.R2_w0_sr4$lambda-obs.R2_w0_sr4$lambda_standard_error,obs.R2_w0_sr5$lambda-obs.R2_w0_sr5$lambda_standard_error)
+
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==3),"Tu_lambda"]<-rep(c(obs.R3_w0$lambda[1]-obs.R3_w0$lambda_standard_error[1], obs.R3_w0$lambda[2]-obs.R3_w0$lambda_standard_error[2]), 2)
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==3),"Te_lambda"]<-rep(c(obs.R3_w0$lambda[3]-obs.R3_w0$lambda_standard_error[3], obs.R3_w0$lambda[4]-obs.R3_w0$lambda_standard_error[4]), each=2)
+
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==4),"Tu_lambda"]<-rep(c(obs.R4_w0$lambda[1]-obs.R4_w0$lambda_standard_error[1], obs.R4_w0$lambda[2]-obs.R4_w0$lambda_standard_error[2]), 2)
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==4),"Te_lambda"]<-rep(c(obs.R4_w0$lambda[3]-obs.R4_w0$lambda_standard_error[3], obs.R4_w0$lambda[4]-obs.R4_w0$lambda_standard_error[4]), each=2)
+
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==5),"Tu_lambda"]<-rep(c(obs.R5_w0$lambda[1]-obs.R5_w0$lambda_standard_error[1], obs.R5_w0$lambda[2]-obs.R5_w0$lambda_standard_error[2]), 2)
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==5),"Te_lambda"]<-rep(c(obs.R5_w0$lambda[3]-obs.R5_w0$lambda_standard_error[3], obs.R5_w0$lambda[4]-obs.R5_w0$lambda_standard_error[4]), each=2)
+
+
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==1),"Tu_intra"]<-rep(c(obs.R1_w0$alpha_matrix[1,1]-obs.R1_w0$alpha_matrix_standard_error[1,1], obs.R1_w0$alpha_matrix[2,2]-obs.R1_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==1),"Te_intra"]<-rep(c(obs.R1_w0$alpha_matrix[3,3]-obs.R1_w0$alpha_matrix_standard_error[3,3], obs.R1_w0$alpha_matrix[4,4]-obs.R1_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==2),"Tu_intra"]<-obs.R2_w0_sr1$alpha_intra-obs.R2_w0_sr1$alpha_intra_standard_error
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==2),"Te_intra"]<-c(obs.R2_w0_sr4$alpha_inter-obs.R2_w0_sr4$alpha_inter_standard_error, obs.R2_w0_sr5$alpha_inter-obs.R2_w0_sr5$alpha_inter_standard_error)
+
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==3),"Tu_intra"]<-rep(c(obs.R3_w0$alpha_matrix[1,1]-obs.R3_w0$alpha_matrix_standard_error[1,1], obs.R3_w0$alpha_matrix[2,2]-obs.R3_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==3),"Te_intra"]<-rep(c(obs.R3_w0$alpha_matrix[3,3]-obs.R3_w0$alpha_matrix_standard_error[3,3], obs.R3_w0$alpha_matrix[4,4]-obs.R3_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==4),"Tu_intra"]<-rep(c(obs.R4_w0$alpha_matrix[1,1]-obs.R4_w0$alpha_matrix_standard_error[1,1], obs.R4_w0$alpha_matrix[2,2]-obs.R4_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==4),"Te_intra"]<-rep(c(obs.R4_w0$alpha_matrix[3,3]-obs.R4_w0$alpha_matrix_standard_error[3,3], obs.R4_w0$alpha_matrix[4,4]-obs.R4_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==5),"Tu_intra"]<-rep(c(obs.R5_w0$alpha_matrix[1,1]-obs.R5_w0$alpha_matrix_standard_error[1,1], obs.R5_w0$alpha_matrix[2,2]-obs.R5_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==5),"Te_intra"]<-rep(c(obs.R5_w0$alpha_matrix[3,3]-obs.R5_w0$alpha_matrix_standard_error[3,3], obs.R5_w0$alpha_matrix[4,4]-obs.R5_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==1),"Tu_inter"]<-c(obs.R1_w0$alpha_matrix[1,3]-obs.R1_w0$alpha_matrix_standard_error[1,3], obs.R1_w0$alpha_matrix[2,3]-obs.R1_w0$alpha_matrix_standard_error[2,3],obs.R1_w0$alpha_matrix[1,4]-obs.R1_w0$alpha_matrix_standard_error[1,4], obs.R1_w0$alpha_matrix[2,4]-obs.R1_w0$alpha_matrix_standard_error[2,4])
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==1),"Te_inter"]<-c(obs.R1_w0$alpha_matrix[3,1]-obs.R1_w0$alpha_matrix_standard_error[3,1], obs.R1_w0$alpha_matrix[3,2]-obs.R1_w0$alpha_matrix_standard_error[3,2],obs.R1_w0$alpha_matrix[4,1]-obs.R1_w0$alpha_matrix_standard_error[4,1], obs.R1_w0$alpha_matrix[4,2]-obs.R1_w0$alpha_matrix_standard_error[4,2])
+
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==2),"Tu_inter"]<-obs.R2_w0_sr1$alpha_inter-obs.R2_w0_sr1$alpha_inter_standard_error
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==2),"Te_inter"]<-c(obs.R2_w0_sr4_inter$alpha_inter-obs.R2_w0_sr4_inter$alpha_inter_standard_error, obs.R2_w0_sr5_inter$alpha_inter-obs.R2_w0_sr5_inter$alpha_inter_standard_error)
+
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==3),"Tu_inter"]<-c(obs.R3_w0$alpha_matrix[1,3]-obs.R3_w0$alpha_matrix_standard_error[1,3], obs.R3_w0$alpha_matrix[2,3]-obs.R3_w0$alpha_matrix_standard_error[2,3],obs.R3_w0$alpha_matrix[1,4]-obs.R3_w0$alpha_matrix_standard_error[1,4], obs.R3_w0$alpha_matrix[2,4]-obs.R3_w0$alpha_matrix_standard_error[2,4])
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==3),"Te_inter"]<-c(obs.R3_w0$alpha_matrix[3,1]-obs.R3_w0$alpha_matrix_standard_error[3,1], obs.R3_w0$alpha_matrix[3,2]-obs.R3_w0$alpha_matrix_standard_error[3,2],obs.R3_w0$alpha_matrix[4,1]-obs.R3_w0$alpha_matrix_standard_error[4,1], obs.R3_w0$alpha_matrix[4,2]-obs.R3_w0$alpha_matrix_standard_error[4,2])
+
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==4),"Tu_inter"]<-c(obs.R4_w0$alpha_matrix[1,3]-obs.R4_w0$alpha_matrix_standard_error[1,3], obs.R4_w0$alpha_matrix[2,3]-obs.R4_w0$alpha_matrix_standard_error[2,3],obs.R4_w0$alpha_matrix[1,4]-obs.R4_w0$alpha_matrix_standard_error[1,4], obs.R4_w0$alpha_matrix[2,4]-obs.R4_w0$alpha_matrix_standard_error[2,4])
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==4),"Te_inter"]<-c(obs.R4_w0$alpha_matrix[3,1]-obs.R4_w0$alpha_matrix_standard_error[3,1], obs.R4_w0$alpha_matrix[3,2]-obs.R4_w0$alpha_matrix_standard_error[3,2],obs.R4_w0$alpha_matrix[4,1]-obs.R4_w0$alpha_matrix_standard_error[4,1], obs.R4_w0$alpha_matrix[4,2]-obs.R4_w0$alpha_matrix_standard_error[4,2])
+
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==5),"Tu_inter"]<-c(obs.R5_w0$alpha_matrix[1,3]-obs.R5_w0$alpha_matrix_standard_error[1,3], obs.R5_w0$alpha_matrix[2,3]-obs.R5_w0$alpha_matrix_standard_error[2,3],obs.R5_w0$alpha_matrix[1,4]-obs.R5_w0$alpha_matrix_standard_error[1,4], obs.R5_w0$alpha_matrix[2,4]-obs.R5_w0$alpha_matrix_standard_error[2,4])
+cxr_param_w0_lower[which(cxr_param_w0_lower$Replicate==5),"Te_inter"]<-c(obs.R5_w0$alpha_matrix[3,1]-obs.R5_w0$alpha_matrix_standard_error[3,1], obs.R5_w0$alpha_matrix[3,2]-obs.R5_w0$alpha_matrix_standard_error[3,2],obs.R5_w0$alpha_matrix[4,1]-obs.R5_w0$alpha_matrix_standard_error[4,1], obs.R5_w0$alpha_matrix[4,2]-obs.R5_w0$alpha_matrix_standard_error[4,2])
+
+### upper
+
+cxr_param_w0_upper<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Replicate=c(1,2,3,4,5), Environment=c("N"))
+cxr_param_w0_upper$Tu_lambda<-0
+cxr_param_w0_upper$Te_lambda<-0
+cxr_param_w0_upper$Tu_intra<-0
+cxr_param_w0_upper$Te_intra<-0
+cxr_param_w0_upper$Tu_inter<-0
+cxr_param_w0_upper$Te_inter<-0
+
+#removing SR2 for replicate 2
+cxr_param_w0_upper<-cxr_param_w0_upper[-which(cxr_param_w0_upper$Replicate==2 & cxr_param_w0_upper$Tu_Regime=="SR2"),]
+
+
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==1),"Tu_lambda"]<-rep(c(obs.R1_w0$lambda[1]+obs.R1_w0$lambda_standard_error[1], obs.R1_w0$lambda[2]+obs.R1_w0$lambda_standard_error[2]), 2)
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==1),"Te_lambda"]<-rep(c(obs.R1_w0$lambda[3]+obs.R1_w0$lambda_standard_error[3], obs.R1_w0$lambda[4]+obs.R1_w0$lambda_standard_error[4]), each=2)
+
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==2),"Tu_lambda"]<-obs.R2_w0_sr1$lambda+ obs.R2_w0_sr1$lambda_standard_error
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==2),"Te_lambda"]<-c(obs.R2_w0_sr4$lambda+obs.R2_w0_sr4$lambda_standard_error, obs.R2_w0_sr5$lambda+obs.R2_w0_sr5$lambda_standard_error)
+
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==3),"Tu_lambda"]<-rep(c(obs.R3_w0$lambda[1]+obs.R3_w0$lambda_standard_error[1], obs.R3_w0$lambda[2]+obs.R3_w0$lambda_standard_error[2]), 2)
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==3),"Te_lambda"]<-rep(c(obs.R3_w0$lambda[3]+obs.R3_w0$lambda_standard_error[3], obs.R3_w0$lambda[4]+obs.R3_w0$lambda_standard_error[4]), each=2)
+
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==4),"Tu_lambda"]<-rep(c(obs.R4_w0$lambda[1]+obs.R4_w0$lambda_standard_error[1], obs.R4_w0$lambda[2]+obs.R4_w0$lambda_standard_error[2]), 2)
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==4),"Te_lambda"]<-rep(c(obs.R4_w0$lambda[3]+obs.R4_w0$lambda_standard_error[3], obs.R4_w0$lambda[4]+obs.R4_w0$lambda_standard_error[4]), each=2)
+
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==5),"Tu_lambda"]<-rep(c(obs.R5_w0$lambda[1]+obs.R5_w0$lambda_standard_error[1], obs.R5_w0$lambda[2]+obs.R5_w0$lambda_standard_error[2]), 2)
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==5),"Te_lambda"]<-rep(c(obs.R5_w0$lambda[3]+obs.R5_w0$lambda_standard_error[3], obs.R5_w0$lambda[4]+obs.R5_w0$lambda_standard_error[4]), each=2)
+
+
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==1),"Tu_intra"]<-rep(c(obs.R1_w0$alpha_matrix[1,1]+obs.R1_w0$alpha_matrix_standard_error[1,1], obs.R1_w0$alpha_matrix[2,2]+obs.R1_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==1),"Te_intra"]<-rep(c(obs.R1_w0$alpha_matrix[3,3]+obs.R1_w0$alpha_matrix_standard_error[3,3], obs.R1_w0$alpha_matrix[4,4]+obs.R1_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==2),"Tu_intra"]<-obs.R2_w0_sr1$alpha_intra+obs.R2_w0_sr1$alpha_intra_standard_error
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==2),"Te_intra"]<-c(obs.R2_w0_sr4$alpha_inter+obs.R2_w0_sr4$alpha_inter_standard_error,  obs.R2_w0_sr5$alpha_inter+obs.R2_w0_sr5$alpha_inter_standard_error)
+
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==3),"Tu_intra"]<-rep(c(obs.R3_w0$alpha_matrix[1,1]+obs.R3_w0$alpha_matrix_standard_error[1,1], obs.R3_w0$alpha_matrix[2,2]+obs.R3_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==3),"Te_intra"]<-rep(c(obs.R3_w0$alpha_matrix[3,3]+obs.R3_w0$alpha_matrix_standard_error[3,3], obs.R3_w0$alpha_matrix[4,4]+obs.R3_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==4),"Tu_intra"]<-rep(c(obs.R4_w0$alpha_matrix[1,1]+obs.R4_w0$alpha_matrix_standard_error[1,1], obs.R4_w0$alpha_matrix[2,2]+obs.R4_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==4),"Te_intra"]<-rep(c(obs.R4_w0$alpha_matrix[3,3]+obs.R4_w0$alpha_matrix_standard_error[3,3], obs.R4_w0$alpha_matrix[4,4]+obs.R4_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==5),"Tu_intra"]<-rep(c(obs.R5_w0$alpha_matrix[1,1]+obs.R5_w0$alpha_matrix_standard_error[1,1], obs.R5_w0$alpha_matrix[2,2]+obs.R5_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==5),"Te_intra"]<-rep(c(obs.R5_w0$alpha_matrix[3,3]+obs.R5_w0$alpha_matrix_standard_error[3,3], obs.R5_w0$alpha_matrix[4,4]+obs.R5_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==1),"Tu_inter"]<-c(obs.R1_w0$alpha_matrix[1,3]+obs.R1_w0$alpha_matrix_standard_error[1,3], obs.R1_w0$alpha_matrix[2,3]+obs.R1_w0$alpha_matrix_standard_error[2,3],obs.R1_w0$alpha_matrix[1,4]+obs.R1_w0$alpha_matrix_standard_error[1,4], obs.R1_w0$alpha_matrix[2,4]+obs.R1_w0$alpha_matrix_standard_error[2,4])
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==1),"Te_inter"]<-c(obs.R1_w0$alpha_matrix[3,1]+obs.R1_w0$alpha_matrix_standard_error[3,1], obs.R1_w0$alpha_matrix[3,2]+obs.R1_w0$alpha_matrix_standard_error[3,2],obs.R1_w0$alpha_matrix[4,1]+obs.R1_w0$alpha_matrix_standard_error[4,1], obs.R1_w0$alpha_matrix[4,2]+obs.R1_w0$alpha_matrix_standard_error[4,2])
+
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==2),"Tu_inter"]<-c(obs.R2_w0_sr1$alpha_inter+obs.R2_w0_sr1$alpha_inter_standard_error)
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==2),"Te_inter"]<-c(obs.R2_w0_sr4_inter$alpha_inter+obs.R2_w0_sr4_inter$alpha_inter_standard_error, obs.R2_w0_sr5_inter$alpha_inter+obs.R2_w0_sr5_inter$alpha_inter_standard_error)
+
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==3),"Tu_inter"]<-c(obs.R3_w0$alpha_matrix[1,3]+obs.R3_w0$alpha_matrix_standard_error[1,3], obs.R3_w0$alpha_matrix[2,3]+obs.R3_w0$alpha_matrix_standard_error[2,3],obs.R3_w0$alpha_matrix[1,4]+obs.R3_w0$alpha_matrix_standard_error[1,4], obs.R3_w0$alpha_matrix[2,4]+obs.R3_w0$alpha_matrix_standard_error[2,4])
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==3),"Te_inter"]<-c(obs.R3_w0$alpha_matrix[3,1]+obs.R3_w0$alpha_matrix_standard_error[3,1], obs.R3_w0$alpha_matrix[3,2]+obs.R3_w0$alpha_matrix_standard_error[3,2],obs.R3_w0$alpha_matrix[4,1]+obs.R3_w0$alpha_matrix_standard_error[4,1], obs.R3_w0$alpha_matrix[4,2]+obs.R3_w0$alpha_matrix_standard_error[4,2])
+
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==4),"Tu_inter"]<-c(obs.R4_w0$alpha_matrix[1,3]+obs.R4_w0$alpha_matrix_standard_error[1,3], obs.R4_w0$alpha_matrix[2,3]+obs.R4_w0$alpha_matrix_standard_error[2,3],obs.R4_w0$alpha_matrix[1,4]+obs.R4_w0$alpha_matrix_standard_error[1,4], obs.R4_w0$alpha_matrix[2,4]+obs.R4_w0$alpha_matrix_standard_error[2,4])
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==4),"Te_inter"]<-c(obs.R4_w0$alpha_matrix[3,1]+obs.R4_w0$alpha_matrix_standard_error[3,1], obs.R4_w0$alpha_matrix[3,2]+obs.R4_w0$alpha_matrix_standard_error[3,2],obs.R4_w0$alpha_matrix[4,1]+obs.R4_w0$alpha_matrix_standard_error[4,1], obs.R4_w0$alpha_matrix[4,2]+obs.R4_w0$alpha_matrix_standard_error[4,2])
+
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==5),"Tu_inter"]<-c(obs.R5_w0$alpha_matrix[1,3]+obs.R5_w0$alpha_matrix_standard_error[1,3], obs.R5_w0$alpha_matrix[2,3]+obs.R5_w0$alpha_matrix_standard_error[2,3],obs.R5_w0$alpha_matrix[1,4]+obs.R5_w0$alpha_matrix_standard_error[1,4], obs.R5_w0$alpha_matrix[2,4]+obs.R5_w0$alpha_matrix_standard_error[2,4])
+cxr_param_w0_upper[which(cxr_param_w0_upper$Replicate==5),"Te_inter"]<-c(obs.R5_w0$alpha_matrix[3,1]+obs.R5_w0$alpha_matrix_standard_error[3,1], obs.R5_w0$alpha_matrix[3,2]+obs.R5_w0$alpha_matrix_standard_error[3,2],obs.R5_w0$alpha_matrix[4,1]+obs.R5_w0$alpha_matrix_standard_error[4,1], obs.R5_w0$alpha_matrix[4,2]+obs.R5_w0$alpha_matrix_standard_error[4,2])
+
+```
+
+##### Cadmium
+
+```{r  eval=FALSE, include=FALSE}
+# modifying data frame to fit the type of setup that is need for CXR
+forCXR_Cd<-subset(ca, Env=="Cd")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales", "TuFemales")]
+
+forCXR_Cd$Focal<-mapvalues(forCXR_Cd$FocalSR, c(1,2,4,5), c("SR1", "SR2","SR4","SR5"))
+forCXR_Cd$CompSR2<-mapvalues(forCXR_Cd$CompSR, c(1,2,4,5), c("SR1", "SR2","SR4","SR5"))
+
+forCXR_Cd$Comp<-sapply(c(1:length(forCXR_Cd[,1])), function(x){
+  if(is.na(forCXR_Cd$CompSR2[x])){
+    a<- forCXR_Cd$Focal[x]
+  }else{
+    a<-forCXR_Cd$CompSR2[x]
+  }
+  
+  a
+})
+
+aux<-data.frame(SR1=rep(0, length(forCXR_Cd[,1])), SR2=rep(0, length(forCXR_Cd[,1])), SR4=rep(0, length(forCXR_Cd[,1])), SR5=rep(0, length(forCXR_Cd[,1])))
+
+for(i in 1:length(forCXR_Cd[,1])){
+  #coluna onde por focais
+  colunaF<-which(colnames(aux)==forCXR_Cd$Focal[i])
+  #coluna onde por competidors
+  colunaC<-which(colnames(aux)==forCXR_Cd$Comp[i])
+  
+  #if its the same regime
+  if(forCXR_Cd$Focal[i]==forCXR_Cd$Comp[i] & forCXR_Cd$Dens[i]==1){
+    aux[i,colunaF]<-forCXR_Cd$Dens[i]-1
+    
+  }else if(forCXR_Cd$Focal[i]==forCXR_Cd$Comp[i]){
+    aux[i,colunaF]<-forCXR_Cd$Dens[i]-1
+  }else{ #if it is heterospecific then its -1 for the competitors (because of the focal) and its one for the focal
+    aux[i,colunaC]<-forCXR_Cd$Dens[i]-1
+    aux[i, colunaF]<-1
+  }
+  
+}
+
+forCXR_Cd<-cbind(forCXR_Cd, aux)
+
+forCXR_Cd$fitness<-sapply(c(1:length(forCXR_Cd[,1])), function(x){
+  colF<-which(colnames(forCXR_Cd)==forCXR_Cd$Focal[x])
+  
+  if(forCXR_Cd$Focal[x]=="SR1"){
+    a<-forCXR_Cd$TuFemales[x]/forCXR_Cd$SR1[x]
+  } else if(forCXR_Cd$Focal[x]=="SR2"){
+    a<-forCXR_Cd$TuFemales[x]/forCXR_Cd$SR2[x]
+  } else if(forCXR_Cd$Focal[x]=="SR4"){
+    a<-forCXR_Cd$TeFemales[x]/forCXR_Cd$SR4[x]
+  } else if(forCXR_Cd$Focal[x]=="SR5"){
+    a<-forCXR_Cd$TeFemales[x]/forCXR_Cd$SR5[x]
+  }
+  
+  a
+})
+
+subset(ca, Env=="Cd" & Rep=="2" & FocalSR==5 &Type=="INTER")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales", "Block")]
+
+#removing rows for which there is no data for fitness
+#forCXR_Cd<-forCXR_Cd[-which(is.na(forCXR_Cd$fitness)),]
+#forCXR_Cd$fitness<-forCXR_Cd$fitness+1
+
+forCXR_Cd[which(forCXR_Cd$fitness=="-Inf" | forCXR_Cd$fitness=="Inf"),"fitness"]<-0
+
+#0 to 1 to mainrain data
+forCXR_Cd<-forCXR_Cd[-which(is.na(forCXR_Cd$fitness)),]
+forCXR_Cd$fitness<-forCXR_Cd$fitness+1
+
+
+
+# vector that tells which are the selection regimes, the columns have to have the same name
+my.reg <- c("SR1", "SR2","SR4","SR5")
+
+# Do list per replicate and environment
+R1_Cd<-list(SR1= subset(forCXR_Cd, Rep==1 & Focal=="SR1")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR2= subset(forCXR_Cd, Rep==1 & Focal=="SR2")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR4= subset(forCXR_Cd, Rep==1 & Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_Cd, Rep==1 & Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
+
+R2_Cd<-list(SR1= subset(forCXR_Cd, Rep==2 & Focal=="SR1")[,c("fitness", "SR1", "SR2","SR4", "SR5")], SR4= subset(forCXR_Cd, Rep==2 & Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_Cd, Rep==2 & Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
+
+R3_Cd<-list(SR1= subset(forCXR_Cd, Rep==3 & Focal=="SR1")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR2= subset(forCXR_Cd, Rep==3 & Focal=="SR2")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR4= subset(forCXR_Cd, Rep==3 & Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_Cd, Rep==3 & Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
+
+R4_Cd<-list(SR1= subset(forCXR_Cd, Rep==4 & Focal=="SR1")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR2= subset(forCXR_Cd, Rep==4 & Focal=="SR2")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR4= subset(forCXR_Cd, Rep==4 & Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_Cd, Rep==4 & Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
+
+R5_Cd<-list(SR1= subset(forCXR_Cd, Rep==5 & Focal=="SR1")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR2= subset(forCXR_Cd, Rep==5 & Focal=="SR2")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR4= subset(forCXR_Cd, Rep==5 & Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_Cd, Rep==5 & Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
+
+
+obs.R1_Cd_w0<-cxr_pm_multifit(data = R1_Cd,
+                           focal_column = my.reg,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "pairwise",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(lambda = 1,
+                                                 alpha_intra = 0.1,
+                                                 alpha_inter = 0.1),
+                          fixed_terms = NULL,
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+# replicate 2 below
+
+
+obs.R3_Cd_w0<-cxr_pm_multifit(data = R3_Cd,
+                           focal_column = my.reg,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "pairwise",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(lambda = 1,
+                                                 alpha_intra = 0.1,
+                                                 alpha_inter = 0.1),
+                          fixed_terms = NULL,
+                           # no standard errors
+                           bootstrap_samples =10)
+
+obs.R4_Cd_w0<-cxr_pm_multifit(data = R4_Cd,
+                           focal_column = my.reg,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "pairwise",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(lambda = 1,
+                                                 alpha_intra = 0.1,
+                                                 alpha_inter = 0.1),
+                          fixed_terms = NULL,
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+obs.R5_Cd_w0<-cxr_pm_multifit(data = R5_Cd,
+                           focal_column = my.reg,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "pairwise",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(lambda = 1,
+                                                 alpha_intra = 0.1,
+                                                 alpha_inter = 0.1),
+                          fixed_terms = NULL,
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+summary(obs.R1_Cd_w0)
+#summary(obs.R2_Cd_w0)
+summary(obs.R3_Cd_w0)
+summary(obs.R4_Cd_w0)
+summary(obs.R5_Cd_w0)
+
+### For replicate I can't find good initial conditions, lets do this by hand
+
+# obs.R2_Cd_w0<-cxr_pm_multifit(data = R2_Cd,
+#                            focal_column = my.reg[c(1,3,4)],
+#                            model_family = "BH",
+#                            covariates = NULL,
+#                           optimization_method = "Nelder-Mead",
+#                           alpha_form = "pairwise",
+#                           lambda_cov_form = "none",
+#                           alpha_cov_form = "none",
+#                            initial_values = list(lambda = 1,
+#                                                  alpha_intra = 0.1,
+#                                                  alpha_inter = 0.1),
+#                           fixed_terms = NULL,
+#                            # no standard errors
+#                            bootstrap_samples =10)
+
+# This one works well
+obs.R2_Cd_w0_sr1<-cxr_pm_fit(data = R2_Cd[[1]],
+                           focal_column = my.reg[1],
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "pairwise",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(lambda = 1,
+                                                 alpha_intra = 0.1,
+                                                 alpha_inter = 0.1),
+                          fixed_terms = NULL,
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+#for replicate 2 we will do the fitting by hand because we may need to scale the parameters
+
+obs.R2_Cd_w0_sr4<-cxr_pm_fit(data = R2_Cd[[2]][which(R2_Cd[[2]][,"SR1"]==0),c("fitness", "SR4")],
+                           focal_column = NULL,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "global",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(lambda = 1,
+                                                 alpha_inter = 0.1),
+                          fixed_terms = NULL,
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+ obs.R2_Cd_w0_sr5<-cxr_pm_fit(data = R2_Cd[[3]][which(R2_Cd[[3]][,"SR1"]==0),c("fitness", "SR5")],
+                           focal_column = NULL,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "global",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list(lambda = 1,
+                                                 alpha_inter = 0.1),
+                          fixed_terms = NULL,
+                           # no standard errors
+                           bootstrap_samples = 1000)
+ 
+obs.R2_Cd_w0_sr4_inter<-cxr_pm_fit(data = R2_Cd[[2]][which(R2_Cd[[2]][,"SR1"]!=0),c("fitness", "SR1")],
+                           focal_column = NULL,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "global",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list( alpha_inter = 0.1),
+                          fixed_terms = list(lambda=obs.R2_Cd_w0_sr4$lambda),
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+ obs.R2_Cd_w0_sr5_inter<-cxr_pm_fit(data = R2_Cd[[3]][which(R2_Cd[[3]][,"SR1"]!=0),c("fitness", "SR1")],
+                           focal_column = NULL,
+                           model_family = "RK",
+                           covariates = NULL,
+                          optimization_method = "Nelder-Mead",
+                          alpha_form = "global",
+                          lambda_cov_form = "none",
+                          alpha_cov_form = "none",
+                           initial_values = list( alpha_inter = 0.1),
+                          fixed_terms = list(lambda=obs.R2_Cd_w0_sr5$lambda),
+                           # no standard errors
+                           bootstrap_samples = 1000)
+
+
+
+```
+
+
+
+###### data table summary
+
+```{r eval=FALSE, include=FALSE}
+
+cxr_param_w0C<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Replicate=c(1,2,3,4,5), Environment=c("Cd"))
+cxr_param_w0C$Tu_lambda<-0
+cxr_param_w0C$Te_lambda<-0
+cxr_param_w0C$Tu_intra<-0
+cxr_param_w0C$Te_intra<-0
+cxr_param_w0C$Tu_inter<-0
+cxr_param_w0C$Te_inter<-0
+
+#removing SR2 for replicate 2
+cxr_param_w0C<-cxr_param_w0C[-which(cxr_param_w0C$Replicate==2 & cxr_param_w0C$Tu_Regime=="SR2"),]
+
+
+cxr_param_w0C[which(cxr_param_w0C$Replicate==1),"Tu_lambda"]<-obs.R1_Cd_w0$lambda[1:2]
+cxr_param_w0C[which(cxr_param_w0C$Replicate==1),"Te_lambda"]<-obs.R1_Cd_w0$lambda[c(3,3,4,4)]
+
+cxr_param_w0C[which(cxr_param_w0C$Replicate==2),"Tu_lambda"]<-obs.R2_Cd_w0_sr1$lambda
+cxr_param_w0C[which(cxr_param_w0C$Replicate==2),"Te_lambda"]<-c(obs.R2_Cd_w0_sr4$lambda, obs.R2_Cd_w0_sr5$lambda)
+
+cxr_param_w0C[which(cxr_param_w0C$Replicate==3),"Tu_lambda"]<-obs.R3_Cd_w0$lambda[1:2]
+cxr_param_w0C[which(cxr_param_w0C$Replicate==3),"Te_lambda"]<-obs.R3_Cd_w0$lambda[c(3,3,4,4)]
+
+cxr_param_w0C[which(cxr_param_w0C$Replicate==4),"Tu_lambda"]<-obs.R4_Cd_w0$lambda[1:2]
+cxr_param_w0C[which(cxr_param_w0C$Replicate==4),"Te_lambda"]<-obs.R4_Cd_w0$lambda[c(3,3,4,4)]
+
+cxr_param_w0C[which(cxr_param_w0C$Replicate==5),"Tu_lambda"]<-obs.R5_Cd_w0$lambda[1:2]
+cxr_param_w0C[which(cxr_param_w0C$Replicate==5),"Te_lambda"]<-obs.R5_Cd_w0$lambda[c(3,3,4,4)]
+
+
+cxr_param_w0C[which(cxr_param_w0C$Replicate==1),"Tu_intra"]<-rep(c(obs.R1_Cd_w0$alpha_matrix[1,1], obs.R1_Cd_w0$alpha_matrix[2,2]), 2)
+cxr_param_w0C[which(cxr_param_w0C$Replicate==1),"Te_intra"]<-rep(c(obs.R1_Cd_w0$alpha_matrix[3,3], obs.R1_Cd_w0$alpha_matrix[4,4]), each=2)
+
+cxr_param_w0C[which(cxr_param_w0C$Replicate==2),"Tu_intra"]<-obs.R2_Cd_w0_sr1$alpha_intra
+cxr_param_w0C[which(cxr_param_w0C$Replicate==2),"Te_intra"]<-c(obs.R2_Cd_w0_sr4$alpha_inter, obs.R2_Cd_w0_sr5$alpha_inter)
+
+cxr_param_w0C[which(cxr_param_w0C$Replicate==3),"Tu_intra"]<-rep(c(obs.R3_Cd_w0$alpha_matrix[1,1], obs.R3_Cd_w0$alpha_matrix[2,2]), 2)
+cxr_param_w0C[which(cxr_param_w0C$Replicate==3),"Te_intra"]<-rep(c(obs.R3_Cd_w0$alpha_matrix[3,3], obs.R3_Cd_w0$alpha_matrix[4,4]), each=2)
+
+cxr_param_w0C[which(cxr_param_w0C$Replicate==4),"Tu_intra"]<-rep(c(obs.R4_Cd_w0$alpha_matrix[1,1], obs.R4_Cd_w0$alpha_matrix[2,2]), 2)
+cxr_param_w0C[which(cxr_param_w0C$Replicate==4),"Te_intra"]<-rep(c(obs.R4_Cd_w0$alpha_matrix[3,3], obs.R4_Cd_w0$alpha_matrix[4,4]), each=2)
+
+cxr_param_w0C[which(cxr_param_w0C$Replicate==5),"Tu_intra"]<-rep(c(obs.R5_Cd_w0$alpha_matrix[1,1], obs.R5_Cd_w0$alpha_matrix[2,2]), 2)
+cxr_param_w0C[which(cxr_param_w0C$Replicate==5),"Te_intra"]<-rep(c(obs.R5_Cd_w0$alpha_matrix[3,3], obs.R5_Cd_w0$alpha_matrix[4,4]), each=2)
+
+
+cxr_param_w0C[which(cxr_param_w0C$Replicate==1),"Tu_inter"]<-c(obs.R1_Cd_w0$alpha_matrix[1,3], obs.R1_Cd_w0$alpha_matrix[2,3],obs.R1_Cd_w0$alpha_matrix[1,4], obs.R1_Cd_w0$alpha_matrix[2,4])
+cxr_param_w0C[which(cxr_param_w0C$Replicate==1),"Te_inter"]<-c(obs.R1_Cd_w0$alpha_matrix[3,1], obs.R1_Cd_w0$alpha_matrix[3,2],obs.R1_Cd_w0$alpha_matrix[4,1], obs.R1_Cd_w0$alpha_matrix[4,2])
+
+cxr_param_w0C[which(cxr_param_w0C$Replicate==2),"Tu_inter"]<-obs.R2_Cd_w0_sr1$alpha_inter[2:3]
+cxr_param_w0C[which(cxr_param_w0C$Replicate==2),"Te_inter"]<-c(obs.R2_Cd_w0_sr4_inter$alpha_inter,  obs.R2_Cd_w0_sr5_inter$alpha_inter)
+
+cxr_param_w0C[which(cxr_param_w0C$Replicate==3),"Tu_inter"]<-c(obs.R3_Cd_w0$alpha_matrix[1,3], obs.R3_Cd_w0$alpha_matrix[2,3],obs.R3_Cd_w0$alpha_matrix[1,4], obs.R3_Cd_w0$alpha_matrix[2,4])
+cxr_param_w0C[which(cxr_param_w0C$Replicate==3),"Te_inter"]<-c(obs.R3_Cd_w0$alpha_matrix[3,1], obs.R3_Cd_w0$alpha_matrix[3,2],obs.R3_Cd_w0$alpha_matrix[4,1], obs.R3_Cd_w0$alpha_matrix[4,2])
+
+cxr_param_w0C[which(cxr_param_w0C$Replicate==4),"Tu_inter"]<-c(obs.R4_Cd_w0$alpha_matrix[1,3], obs.R4_Cd_w0$alpha_matrix[2,3],obs.R4_Cd_w0$alpha_matrix[1,4], obs.R4_Cd_w0$alpha_matrix[2,4])
+cxr_param_w0C[which(cxr_param_w0C$Replicate==4),"Te_inter"]<-c(obs.R4_Cd_w0$alpha_matrix[3,1], obs.R4_Cd_w0$alpha_matrix[3,2],obs.R4_Cd_w0$alpha_matrix[4,1], obs.R4_Cd_w0$alpha_matrix[4,2])
+
+cxr_param_w0C[which(cxr_param_w0C$Replicate==5),"Tu_inter"]<-c(obs.R5_Cd_w0$alpha_matrix[1,3], obs.R5_Cd_w0$alpha_matrix[2,3],obs.R5_Cd_w0$alpha_matrix[1,4], obs.R5_Cd_w0$alpha_matrix[2,4])
+cxr_param_w0C[which(cxr_param_w0C$Replicate==5),"Te_inter"]<-c(obs.R5_Cd_w0$alpha_matrix[3,1], obs.R5_Cd_w0$alpha_matrix[3,2],obs.R5_Cd_w0$alpha_matrix[4,1], obs.R5_Cd_w0$alpha_matrix[4,2])
+
+
+cxr_param_w0C
+
+### Lower
+
+cxr_param_w0C_lower<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Replicate=c(1,2,3,4,5), Environment=c("Cd"))
+cxr_param_w0C_lower$Tu_lambda<-0
+cxr_param_w0C_lower$Te_lambda<-0
+cxr_param_w0C_lower$Tu_intra<-0
+cxr_param_w0C_lower$Te_intra<-0
+cxr_param_w0C_lower$Tu_inter<-0
+cxr_param_w0C_lower$Te_inter<-0
+
+#removing SR2 for replicate 2
+cxr_param_w0C_lower<-cxr_param_w0C_lower[-which(cxr_param_w0C_lower$Replicate==2 & cxr_param_w0C_lower$Tu_Regime=="SR2"),]
+
+
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==1),"Tu_lambda"]<-rep(c(obs.R1_Cd_w0$lambda[1]-obs.R1_Cd_w0$lambda_standard_error[1], obs.R1_Cd_w0$lambda[2]-obs.R1_Cd_w0$lambda_standard_error[2]), 2)
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==1),"Te_lambda"]<-rep(c(obs.R1_Cd_w0$lambda[3]-obs.R1_Cd_w0$lambda_standard_error[3], obs.R1_Cd_w0$lambda[4]-obs.R1_Cd_w0$lambda_standard_error[4]), each=2)
+
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==2),"Tu_lambda"]<-c(obs.R2_Cd_w0_sr1$lambda-obs.R2_Cd_w0_sr1$lambda_standard_error)
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==2),"Te_lambda"]<-c(obs.R2_Cd_w0_sr4$lambda-obs.R2_Cd_w0_sr4$lambda_standard_error, obs.R2_Cd_w0_sr5$lambda-obs.R2_Cd_w0_sr5$lambda_standard_error)
+
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==3),"Tu_lambda"]<-rep(c(obs.R3_Cd_w0$lambda[1]-obs.R3_Cd_w0$lambda_standard_error[1], obs.R3_Cd_w0$lambda[2]-obs.R3_Cd_w0$lambda_standard_error[2]), 2)
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==3),"Te_lambda"]<-rep(c(obs.R3_Cd_w0$lambda[3]-obs.R3_Cd_w0$lambda_standard_error[3], obs.R3_Cd_w0$lambda[4]-obs.R3_Cd_w0$lambda_standard_error[4]), each=2)
+
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==4),"Tu_lambda"]<-rep(c(obs.R4_Cd_w0$lambda[1]-obs.R4_Cd_w0$lambda_standard_error[1], obs.R4_Cd_w0$lambda[2]-obs.R4_Cd_w0$lambda_standard_error[2]), 2)
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==4),"Te_lambda"]<-rep(c(obs.R4_Cd_w0$lambda[3]-obs.R4_Cd_w0$lambda_standard_error[3], obs.R4_Cd_w0$lambda[4]-obs.R4_Cd_w0$lambda_standard_error[4]), each=2)
+
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==5),"Tu_lambda"]<-rep(c(obs.R5_Cd_w0$lambda[1]-obs.R5_Cd_w0$lambda_standard_error[1], obs.R5_Cd_w0$lambda[2]-obs.R5_Cd_w0$lambda_standard_error[2]), 2)
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==5),"Te_lambda"]<-rep(c(obs.R5_Cd_w0$lambda[3]-obs.R5_Cd_w0$lambda_standard_error[3], obs.R5_Cd_w0$lambda[4]-obs.R5_Cd_w0$lambda_standard_error[4]), each=2)
+
+
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==1),"Tu_intra"]<-rep(c(obs.R1_Cd_w0$alpha_matrix[1,1]-obs.R1_Cd_w0$alpha_matrix_standard_error[1,1], obs.R1_Cd_w0$alpha_matrix[2,2]-obs.R1_Cd_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==1),"Te_intra"]<-rep(c(obs.R1_Cd_w0$alpha_matrix[3,3]-obs.R1_Cd_w0$alpha_matrix_standard_error[3,3], obs.R1_Cd_w0$alpha_matrix[4,4]-obs.R1_Cd_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==2),"Tu_intra"]<-obs.R2_Cd_w0_sr1$alpha_intra-obs.R2_Cd_w0_sr1$alpha_intra_standard_error
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==2),"Te_intra"]<-c(obs.R2_Cd_w0_sr4$alpha_inter-obs.R2_Cd_w0_sr4$alpha_inter_standard_error, obs.R2_Cd_w0_sr5$alpha_inter-obs.R2_Cd_w0_sr5$alpha_inter_standard_error)
+
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==3),"Tu_intra"]<-rep(c(obs.R3_Cd_w0$alpha_matrix[1,1]-obs.R3_Cd_w0$alpha_matrix_standard_error[1,1], obs.R3_Cd_w0$alpha_matrix[2,2]-obs.R3_Cd_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==3),"Te_intra"]<-rep(c(obs.R3_Cd_w0$alpha_matrix[3,3]-obs.R3_Cd_w0$alpha_matrix_standard_error[3,3], obs.R3_Cd_w0$alpha_matrix[4,4]-obs.R3_Cd_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==4),"Tu_intra"]<-rep(c(obs.R4_Cd_w0$alpha_matrix[1,1]-obs.R4_Cd_w0$alpha_matrix_standard_error[1,1], obs.R4_Cd_w0$alpha_matrix[2,2]-obs.R4_Cd_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==4),"Te_intra"]<-rep(c(obs.R4_Cd_w0$alpha_matrix[3,3]-obs.R4_Cd_w0$alpha_matrix_standard_error[3,3], obs.R4_Cd_w0$alpha_matrix[4,4]-obs.R4_Cd_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==5),"Tu_intra"]<-rep(c(obs.R5_Cd_w0$alpha_matrix[1,1]-obs.R5_Cd_w0$alpha_matrix_standard_error[1,1], obs.R5_Cd_w0$alpha_matrix[2,2]-obs.R5_Cd_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==5),"Te_intra"]<-rep(c(obs.R5_Cd_w0$alpha_matrix[3,3]-obs.R5_Cd_w0$alpha_matrix_standard_error[3,3], obs.R5_Cd_w0$alpha_matrix[4,4]-obs.R5_Cd_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==1),"Tu_inter"]<-c(obs.R1_Cd_w0$alpha_matrix[1,3]-obs.R1_Cd_w0$alpha_matrix_standard_error[1,3], obs.R1_Cd_w0$alpha_matrix[2,3]-obs.R1_Cd_w0$alpha_matrix_standard_error[2,3],obs.R1_Cd_w0$alpha_matrix[1,4]-obs.R1_Cd_w0$alpha_matrix_standard_error[1,4], obs.R1_Cd_w0$alpha_matrix[2,4]-obs.R1_Cd_w0$alpha_matrix_standard_error[2,4])
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==1),"Te_inter"]<-c(obs.R1_Cd_w0$alpha_matrix[3,1]-obs.R1_Cd_w0$alpha_matrix_standard_error[3,1], obs.R1_Cd_w0$alpha_matrix[3,2]-obs.R1_Cd_w0$alpha_matrix_standard_error[3,2],obs.R1_Cd_w0$alpha_matrix[4,1]-obs.R1_Cd_w0$alpha_matrix_standard_error[4,1], obs.R1_Cd_w0$alpha_matrix[4,2]-obs.R1_Cd_w0$alpha_matrix_standard_error[4,2])
+
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==2),"Tu_inter"]<-obs.R2_Cd_w0_sr1$alpha_inter[2:3]-obs.R2_Cd_w0_sr1$alpha_inter_standard_error[2:3]
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==2),"Te_inter"]<-c(obs.R2_Cd_w0_sr4_inter$alpha_inter-obs.R2_Cd_w0_sr4_inter$alpha_inter_standard_error, obs.R2_Cd_w0_sr5_inter$alpha_inter-obs.R2_Cd_w0_sr5_inter$alpha_inter_standard_error)
+
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==3),"Tu_inter"]<-c(obs.R3_Cd_w0$alpha_matrix[1,3]-obs.R3_Cd_w0$alpha_matrix_standard_error[1,3], obs.R3_Cd_w0$alpha_matrix[2,3]-obs.R3_Cd_w0$alpha_matrix_standard_error[2,3],obs.R3_Cd_w0$alpha_matrix[1,4]-obs.R3_Cd_w0$alpha_matrix_standard_error[1,4], obs.R3_Cd_w0$alpha_matrix[2,4]-obs.R3_Cd_w0$alpha_matrix_standard_error[2,4])
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==3),"Te_inter"]<-c(obs.R3_Cd_w0$alpha_matrix[3,1]-obs.R3_Cd_w0$alpha_matrix_standard_error[3,1], obs.R3_Cd_w0$alpha_matrix[3,2]-obs.R3_Cd_w0$alpha_matrix_standard_error[3,2],obs.R3_Cd_w0$alpha_matrix[4,1]-obs.R3_Cd_w0$alpha_matrix_standard_error[4,1], obs.R3_Cd_w0$alpha_matrix[4,2]-obs.R3_Cd_w0$alpha_matrix_standard_error[4,2])
+
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==4),"Tu_inter"]<-c(obs.R4_Cd_w0$alpha_matrix[1,3]-obs.R4_Cd_w0$alpha_matrix_standard_error[1,3], obs.R4_Cd_w0$alpha_matrix[2,3]-obs.R4_Cd_w0$alpha_matrix_standard_error[2,3],obs.R4_Cd_w0$alpha_matrix[1,4]-obs.R4_Cd_w0$alpha_matrix_standard_error[1,4], obs.R4_Cd_w0$alpha_matrix[2,4]-obs.R4_Cd_w0$alpha_matrix_standard_error[2,4])
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==4),"Te_inter"]<-c(obs.R4_Cd_w0$alpha_matrix[3,1]-obs.R4_Cd_w0$alpha_matrix_standard_error[3,1], obs.R4_Cd_w0$alpha_matrix[3,2]-obs.R4_Cd_w0$alpha_matrix_standard_error[3,2],obs.R4_Cd_w0$alpha_matrix[4,1]-obs.R4_Cd_w0$alpha_matrix_standard_error[4,1], obs.R4_Cd_w0$alpha_matrix[4,2]-obs.R4_Cd_w0$alpha_matrix_standard_error[4,2])
+
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==5),"Tu_inter"]<-c(obs.R5_Cd_w0$alpha_matrix[1,3]-obs.R5_Cd_w0$alpha_matrix_standard_error[1,3], obs.R5_Cd_w0$alpha_matrix[2,3]-obs.R5_Cd_w0$alpha_matrix_standard_error[2,3],obs.R5_Cd_w0$alpha_matrix[1,4]-obs.R5_Cd_w0$alpha_matrix_standard_error[1,4], obs.R5_Cd_w0$alpha_matrix[2,4]-obs.R5_Cd_w0$alpha_matrix_standard_error[2,4])
+cxr_param_w0C_lower[which(cxr_param_w0C_lower$Replicate==5),"Te_inter"]<-c(obs.R5_Cd_w0$alpha_matrix[3,1]-obs.R5_Cd_w0$alpha_matrix_standard_error[3,1], obs.R5_Cd_w0$alpha_matrix[3,2]-obs.R5_Cd_w0$alpha_matrix_standard_error[3,2],obs.R5_Cd_w0$alpha_matrix[4,1]-obs.R5_Cd_w0$alpha_matrix_standard_error[4,1], obs.R5_Cd_w0$alpha_matrix[4,2]-obs.R5_Cd_w0$alpha_matrix_standard_error[4,2])
+
+### upper
+
+cxr_param_w0C_upper<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Replicate=c(1,2,3,4,5), Environment=c("Cd"))
+cxr_param_w0C_upper$Tu_lambda<-0
+cxr_param_w0C_upper$Te_lambda<-0
+cxr_param_w0C_upper$Tu_intra<-0
+cxr_param_w0C_upper$Te_intra<-0
+cxr_param_w0C_upper$Tu_inter<-0
+cxr_param_w0C_upper$Te_inter<-0
+
+#removing SR2 for replicate 2
+cxr_param_w0C_upper<-cxr_param_w0C_upper[-which(cxr_param_w0C_upper$Replicate==2 & cxr_param_w0C_upper$Tu_Regime=="SR2"),]
+
+
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==1),"Tu_lambda"]<-rep(c(obs.R1_Cd_w0$lambda[1]+obs.R1_Cd_w0$lambda_standard_error[1], obs.R1_Cd_w0$lambda[2]+obs.R1_Cd_w0$lambda_standard_error[2]), 2)
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==1),"Te_lambda"]<-rep(c(obs.R1_Cd_w0$lambda[3]+obs.R1_Cd_w0$lambda_standard_error[3], obs.R1_Cd_w0$lambda[4]+obs.R1_Cd_w0$lambda_standard_error[4]), each=2)
+
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==2),"Tu_lambda"]<-c(obs.R2_Cd_w0_sr1$lambda+obs.R2_Cd_w0_sr1$lambda_standard_error)
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==2),"Te_lambda"]<-c(obs.R2_Cd_w0_sr4$lambda+obs.R2_Cd_w0_sr4$lambda_standard_error, obs.R2_Cd_w0_sr5$lambda+obs.R2_Cd_w0_sr5$lambda_standard_error)
+
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==3),"Tu_lambda"]<-rep(c(obs.R3_Cd_w0$lambda[1]+obs.R3_Cd_w0$lambda_standard_error[1], obs.R3_Cd_w0$lambda[2]+obs.R3_Cd_w0$lambda_standard_error[2]), 2)
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==3),"Te_lambda"]<-rep(c(obs.R3_Cd_w0$lambda[3]+obs.R3_Cd_w0$lambda_standard_error[3], obs.R3_Cd_w0$lambda[4]+obs.R3_Cd_w0$lambda_standard_error[4]), each=2)
+
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==4),"Tu_lambda"]<-rep(c(obs.R4_Cd_w0$lambda[1]+obs.R4_Cd_w0$lambda_standard_error[1], obs.R4_Cd_w0$lambda[2]+obs.R4_Cd_w0$lambda_standard_error[2]), 2)
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==4),"Te_lambda"]<-rep(c(obs.R4_Cd_w0$lambda[3]+obs.R4_Cd_w0$lambda_standard_error[3], obs.R4_Cd_w0$lambda[4]+obs.R4_Cd_w0$lambda_standard_error[4]), each=2)
+
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==5),"Tu_lambda"]<-rep(c(obs.R5_Cd_w0$lambda[1]+obs.R5_Cd_w0$lambda_standard_error[1], obs.R5_Cd_w0$lambda[2]+obs.R5_Cd_w0$lambda_standard_error[2]), 2)
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==5),"Te_lambda"]<-rep(c(obs.R5_Cd_w0$lambda[3]+obs.R5_Cd_w0$lambda_standard_error[3], obs.R5_Cd_w0$lambda[4]+obs.R5_Cd_w0$lambda_standard_error[4]), each=2)
+
+
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==1),"Tu_intra"]<-rep(c(obs.R1_Cd_w0$alpha_matrix[1,1]+obs.R1_Cd_w0$alpha_matrix_standard_error[1,1], obs.R1_Cd_w0$alpha_matrix[2,2]+obs.R1_Cd_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==1),"Te_intra"]<-rep(c(obs.R1_Cd_w0$alpha_matrix[3,3]+obs.R1_Cd_w0$alpha_matrix_standard_error[3,3], obs.R1_Cd_w0$alpha_matrix[4,4]+obs.R1_Cd_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==2),"Tu_intra"]<-obs.R2_Cd_w0_sr1$alpha_intra + obs.R2_Cd_w0_sr1$alpha_intra_standard_error
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==2),"Te_intra"]<-c(obs.R2_Cd_w0_sr4$alpha_inter+obs.R2_Cd_w0_sr4$alpha_inter_standard_error, obs.R2_Cd_w0_sr5$alpha_inter+obs.R2_Cd_w0_sr5$alpha_inter_standard_error)
+
+
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==3),"Tu_intra"]<-rep(c(obs.R3_Cd_w0$alpha_matrix[1,1]+obs.R3_Cd_w0$alpha_matrix_standard_error[1,1], obs.R3_Cd_w0$alpha_matrix[2,2]+obs.R3_Cd_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==3),"Te_intra"]<-rep(c(obs.R3_Cd_w0$alpha_matrix[3,3]+obs.R3_Cd_w0$alpha_matrix_standard_error[3,3], obs.R3_Cd_w0$alpha_matrix[4,4]+obs.R3_Cd_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==4),"Tu_intra"]<-rep(c(obs.R4_Cd_w0$alpha_matrix[1,1]+obs.R4_Cd_w0$alpha_matrix_standard_error[1,1], obs.R4_Cd_w0$alpha_matrix[2,2]+obs.R4_Cd_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==4),"Te_intra"]<-rep(c(obs.R4_Cd_w0$alpha_matrix[3,3]+obs.R4_Cd_w0$alpha_matrix_standard_error[3,3], obs.R4_Cd_w0$alpha_matrix[4,4]+obs.R4_Cd_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==5),"Tu_intra"]<-rep(c(obs.R5_Cd_w0$alpha_matrix[1,1]+obs.R5_Cd_w0$alpha_matrix_standard_error[1,1], obs.R5_Cd_w0$alpha_matrix[2,2]+obs.R5_Cd_w0$alpha_matrix_standard_error[2,2]), 2)
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==5),"Te_intra"]<-rep(c(obs.R5_Cd_w0$alpha_matrix[3,3]+obs.R5_Cd_w0$alpha_matrix_standard_error[3,3], obs.R5_Cd_w0$alpha_matrix[4,4]+obs.R5_Cd_w0$alpha_matrix_standard_error[4,4]), each=2)
+
+
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==1),"Tu_inter"]<-c(obs.R1_Cd_w0$alpha_matrix[1,3]+obs.R1_Cd_w0$alpha_matrix_standard_error[1,3], obs.R1_Cd_w0$alpha_matrix[2,3]+obs.R1_Cd_w0$alpha_matrix_standard_error[2,3],obs.R1_Cd_w0$alpha_matrix[1,4]+obs.R1_Cd_w0$alpha_matrix_standard_error[1,4], obs.R1_Cd_w0$alpha_matrix[2,4]+obs.R1_Cd_w0$alpha_matrix_standard_error[2,4])
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==1),"Te_inter"]<-c(obs.R1_Cd_w0$alpha_matrix[3,1]+obs.R1_Cd_w0$alpha_matrix_standard_error[3,1], obs.R1_Cd_w0$alpha_matrix[3,2]+obs.R1_Cd_w0$alpha_matrix_standard_error[3,2],obs.R1_Cd_w0$alpha_matrix[4,1]+obs.R1_Cd_w0$alpha_matrix_standard_error[4,1], obs.R1_Cd_w0$alpha_matrix[4,2]+obs.R1_Cd_w0$alpha_matrix_standard_error[4,2])
+
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==2),"Tu_inter"]<-obs.R2_Cd_w0_sr1$alpha_inter[2:3]+obs.R2_Cd_w0_sr1$alpha_inter_standard_error[2:3]
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==2),"Te_inter"]<-c(obs.R2_Cd_w0_sr4_inter$alpha_inter+obs.R2_Cd_w0_sr4_inter$alpha_inter_standard_error, obs.R2_Cd_w0_sr5_inter$alpha_inter+obs.R2_Cd_w0_sr5_inter$alpha_inter_standard_error)
+
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==3),"Tu_inter"]<-c(obs.R3_Cd_w0$alpha_matrix[1,3]+obs.R3_Cd_w0$alpha_matrix_standard_error[1,3], obs.R3_Cd_w0$alpha_matrix[2,3]+obs.R3_Cd_w0$alpha_matrix_standard_error[2,3],obs.R3_Cd_w0$alpha_matrix[1,4]+obs.R3_Cd_w0$alpha_matrix_standard_error[1,4], obs.R3_Cd_w0$alpha_matrix[2,4]+obs.R3_Cd_w0$alpha_matrix_standard_error[2,4])
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==3),"Te_inter"]<-c(obs.R3_Cd_w0$alpha_matrix[3,1]+obs.R3_Cd_w0$alpha_matrix_standard_error[3,1], obs.R3_Cd_w0$alpha_matrix[3,2]+obs.R3_Cd_w0$alpha_matrix_standard_error[3,2],obs.R3_Cd_w0$alpha_matrix[4,1]+obs.R3_Cd_w0$alpha_matrix_standard_error[4,1], obs.R3_Cd_w0$alpha_matrix[4,2]+obs.R3_Cd_w0$alpha_matrix_standard_error[4,2])
+
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==4),"Tu_inter"]<-c(obs.R4_Cd_w0$alpha_matrix[1,3]+obs.R4_Cd_w0$alpha_matrix_standard_error[1,3], obs.R4_Cd_w0$alpha_matrix[2,3]+obs.R4_Cd_w0$alpha_matrix_standard_error[2,3],obs.R4_Cd_w0$alpha_matrix[1,4]+obs.R4_Cd_w0$alpha_matrix_standard_error[1,4], obs.R4_Cd_w0$alpha_matrix[2,4]+obs.R4_Cd_w0$alpha_matrix_standard_error[2,4])
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==4),"Te_inter"]<-c(obs.R4_Cd_w0$alpha_matrix[3,1]+obs.R4_Cd_w0$alpha_matrix_standard_error[3,1], obs.R4_Cd_w0$alpha_matrix[3,2]+obs.R4_Cd_w0$alpha_matrix_standard_error[3,2],obs.R4_Cd_w0$alpha_matrix[4,1]+obs.R4_Cd_w0$alpha_matrix_standard_error[4,1], obs.R4_Cd_w0$alpha_matrix[4,2]+obs.R4_Cd_w0$alpha_matrix_standard_error[4,2])
+
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==5),"Tu_inter"]<-c(obs.R5_Cd_w0$alpha_matrix[1,3]+obs.R5_Cd_w0$alpha_matrix_standard_error[1,3], obs.R5_Cd_w0$alpha_matrix[2,3]+obs.R5_Cd_w0$alpha_matrix_standard_error[2,3],obs.R5_Cd_w0$alpha_matrix[1,4]+obs.R5_Cd_w0$alpha_matrix_standard_error[1,4], obs.R5_Cd_w0$alpha_matrix[2,4]+obs.R5_Cd_w0$alpha_matrix_standard_error[2,4])
+cxr_param_w0C_upper[which(cxr_param_w0C_upper$Replicate==5),"Te_inter"]<-c(obs.R5_Cd_w0$alpha_matrix[3,1]+obs.R5_Cd_w0$alpha_matrix_standard_error[3,1], obs.R5_Cd_w0$alpha_matrix[3,2]+obs.R5_Cd_w0$alpha_matrix_standard_error[3,2],obs.R5_Cd_w0$alpha_matrix[4,1]+obs.R5_Cd_w0$alpha_matrix_standard_error[4,1], obs.R5_Cd_w0$alpha_matrix[4,2]+obs.R5_Cd_w0$alpha_matrix_standard_error[4,2])
+
+
+```
+
+```{r eval=FALSE, include=FALSE}
+param_all_w0<-as.data.frame(rbind(cxr_param_w0, cxr_param_w0C))
+
+param_all_w0_lower<-as.data.frame(rbind(cxr_param_w0_lower, cxr_param_w0C_lower))
+param_all_w0_upper<-as.data.frame(rbind(cxr_param_w0_upper, cxr_param_w0C_upper))
+
+
+param_all_w0_lower
+param_all_w0_upper
+
+write.csv(param_all_w0, "./Analyses/cxr_normal/parameters_cxr_normal.csv")
+write.csv(param_all_w0_upper, "./Analyses/cxr_normal/parameters_cxr_normal_upper.csv")
+write.csv(param_all_w0_lower, "./Analyses/cxr_normal/parameters_cxr_normal_lower.csv")
+```
+
+Again, to use the files already done we can just import from the available files
+
+###### Importing data files
+
+```{r}
+## Importing
+param_all_w0<-read.csv("./Analyses/cxr_normal/parameters_cxr_normal.csv")
+param_all_w0_upper<-read.csv("./Analyses/cxr_normal/parameters_cxr_normal_upper.csv")
+param_all_w0_lower<-read.csv( "./Analyses/cxr_normal/parameters_cxr_normal_lower.csv")
+
+param_all_w0<-param_all_w0[,-1]
+param_all_w0_upper<-param_all_w0_upper[,-1]
+param_all_w0_lower<-param_all_w0_lower[,-1]
+
+```
+
+data wrangling
+
+```{r}
+
+param_all_w0_long<-gather(param_all_w0, parameter, value,Tu_lambda:Te_inter )
+
+param_all_w0_long$category<-mapvalues(param_all_w0_long$parameter, c("Tu_lambda", "Te_lambda", "Tu_intra", "Te_intra","Tu_inter", "Te_inter"), c("lambda", "lambda", "intra", "intra", "inter", "inter"))
+
+param_all_w0_lower_long<-gather(param_all_w0_lower, parameter, value,Tu_lambda:Te_inter )
+
+param_all_w0_lower_long$category<-mapvalues(param_all_w0_lower_long$parameter, c("Tu_lambda", "Te_lambda", "Tu_intra", "Te_intra","Tu_inter", "Te_inter"), c("lambda", "lambda", "intra", "intra", "inter", "inter"))
+
+param_all_w0_upper_long<-gather(param_all_w0_upper, parameter, value,Tu_lambda:Te_inter )
+
+param_all_w0_upper_long$category<-mapvalues(param_all_w0_upper_long$parameter, c("Tu_lambda", "Te_lambda", "Tu_intra", "Te_intra","Tu_inter", "Te_inter"), c("lambda", "lambda", "intra", "intra", "inter", "inter"))
+
+colnames(param_all_w0_lower_long)[6]<-"lower"
+colnames(param_all_w0_upper_long)[6]<-"upper"
+
+str(param_all_w0_long)
+
+param_all_w0_long<-cbind(param_all_w0_long[,1:6],param_all_w0_lower_long$lower, param_all_w0_upper_long$upper)
+
+colnames(param_all_w0_long)[7:8]<-c("lower","upper")
+str(param_all_w0_long)
+
+
+```
+
+### Figures
+
+```{r}
+colors_comb<-brewer.pal(name = "Spectral", 4)
+
+#"#D7191C" "#FDAE61" "#ABDDA4" "#2B83BA"
+
+### Cadmium env
+
+Tu_gr_ev<-ggplot(data=subset(param_all_REP_long, (parameter=="Tu_lambda" & Te_Regime=="SR4" & Environment=="Cd")), aes(fill=Tu_Regime, y=value, x=Tu_Regime))+
+    geom_hline(yintercept = 1, colour="lightgray", linetype="dashed")+
+  geom_errorbar(data=subset(param_all_w0_long, (parameter=="Tu_lambda" & Te_Regime=="SR4" & Environment=="Cd")), aes(y=value, x=Tu_Regime, ymin=lower, ymax=upper), position=position_dodge2(width=0.3), colour="grey", width=0.3)+
+  geom_point(data=subset(param_all_w0_long, (parameter=="Tu_lambda" & Te_Regime=="SR4" & Environment=="Cd")), position=position_dodge2(width=0.3), size=2, shape=24,aes(fill=Tu_Regime, y=value, x=Tu_Regime), alpha=0.85, colour="darkgrey")+
+  geom_errorbar(data=subset(param_all_REP_long, (parameter=="Tu_lambda" & Te_Regime=="SR4" & Environment=="Cd")), aes(ymin=lower, ymax=upper), colour="black", width=0.1)+
+  geom_point(data=subset(param_all_REP_long, (parameter=="Tu_lambda" & Te_Regime=="SR4" & Environment=="Cd")), size=4, shape=21)+
+  theme_ines+
+ scale_x_discrete(labels=c("No cadmium","Cadmium"))+
+  scale_fill_manual(values=c("lightgrey", "black"), labels=c("No cadmium", "Cadmium"), name="")+
+  ylab("Intrinsic growth rate\n(T. urticae)")+
+  xlab("T. urticae selection regime")+theme(legend.position = "None")
+
+Tu_intra_ev<-ggplot(data=subset(param_all_REP_long, (parameter=="Tu_intra" & Te_Regime=="SR4" & Environment=="Cd")), aes(fill=Tu_Regime, y=value, x=Tu_Regime))+
+    geom_hline(yintercept = 0, colour="lightgray", linetype="dashed")+
+  geom_errorbar(data=subset(param_all_w0_long, (parameter=="Tu_intra" & Te_Regime=="SR4" & Environment=="Cd")), aes(y=value, x=Tu_Regime, ymin=lower, ymax=upper), position=position_dodge2(width=0.3), colour="grey", width=0.3)+
+  geom_point(data=subset(param_all_w0_long, (parameter=="Tu_intra" & Te_Regime=="SR4" & Environment=="Cd")), position=position_dodge2(width=0.3), size=2, shape=24,aes(fill=Tu_Regime, y=value, x=Tu_Regime), alpha=0.85, colour="darkgrey")+
+  geom_errorbar(data=subset(param_all_REP_long, (parameter=="Tu_intra" & Te_Regime=="SR4" & Environment=="Cd")), aes(ymin=lower, ymax=upper), colour="black", width=0.1)+
+  geom_point(data=subset(param_all_REP_long, (parameter=="Tu_intra" & Te_Regime=="SR4" & Environment=="Cd")), size=4, shape=21)+
+  theme_ines+
+ scale_x_discrete(labels=c("No cadmium","Cadmium"))+
+  scale_fill_manual(values=c("lightgrey", "black"), labels=c("No cadmium", "Cadmium"), name="")+
+  ylab("Strength of intraspecific\ncompetition (T. urticae)")+
+  xlab("T. urticae selection regime")+theme(legend.position = "None")
+
+
+Tu_inter_ev<-ggplot(data=subset(param_all_REP_long, (parameter=="Tu_inter" & Environment=="Cd")), aes(fill=interaction(Te_Regime,Tu_Regime), y=value, x=Tu_Regime))+
+    geom_hline(yintercept = 0, colour="lightgray", linetype="dashed")+
+  geom_errorbar(data=subset(param_all_w0_long, (parameter=="Tu_inter" & Environment=="Cd")), aes(y=value, x=Tu_Regime, ymin=lower, ymax=upper), position=position_dodge2(width=0.3), colour="grey", width=0.3)+
+  geom_point(data=subset(param_all_w0_long, (parameter=="Tu_inter"  & Environment=="Cd")), position=position_dodge2(width=0.3), size=2, shape=24,aes(fill=interaction(Te_Regime,Tu_Regime), y=value, x=Tu_Regime), alpha=0.85, colour="darkgrey")+
+  geom_errorbar(data=subset(param_all_REP_long, (parameter=="Tu_inter" & Environment=="Cd")), aes(ymin=lower, ymax=upper),position=position_dodge2(0.3), colour="black", width=0.3)+
+  geom_point(data=subset(param_all_REP_long, (parameter=="Tu_inter" & Environment=="Cd")),position=position_dodge2(0.3), size=4, shape=21)+
+  theme_ines+
+ scale_x_discrete(labels=c("No cadmium","Cadmium"))+
+  #scale_fill_brewer(palette = "Spectral", labels=c("Te no cadmium:Tu no cadmium", "Te cadmium:Tu no cadmium", "Te no cadmium:Tu cadmium", "Te cadmium:Tu cadmium"), name="")+
+  scale_fill_manual(values=c("#D7191C", "#FDAE61" ,"#ABDDA4", "#2B83BA"), labels=c("Te no cadmium:Tu no cadmium", "Te cadmium: Tu no cadmium", "Te no cadmium: Tu cadmium", "Te cadmium: Tu cadmium"), name="")+
+  ylab("Strength of interspecific\ncompetition (T. urticae)")+
+  xlab("T. urticae selection regime")+
+  guides(fill=guide_legend(nrow = 4))+
+  theme(legend.position = "None", legend.text = element_text(size=10), legend.background = element_rect(fill=NA), legend.key.size = unit(0.2, 'cm'))
+
+Te_gr_ev<-ggplot(data=subset(param_all_REP_long, (parameter=="Te_lambda" & Tu_Regime=="SR1" & Environment=="Cd")), aes(fill=Te_Regime, y=value, x=Te_Regime))+
+    geom_hline(yintercept = 1, colour="lightgray", linetype="dashed")+
+  geom_errorbar(data=subset(param_all_w0_long, (parameter=="Te_lambda" & Tu_Regime=="SR1" & Environment=="Cd")), aes(y=value, x=Te_Regime, ymin=lower, ymax=upper), position=position_dodge2(width=0.3), colour="grey", width=0.3)+
+  geom_point(data=subset(param_all_w0_long, (parameter=="Te_lambda" & Tu_Regime=="SR1" & Environment=="Cd")), position=position_dodge2(width=0.3), size=2, shape=24,aes(fill=Te_Regime, y=value, x=Te_Regime), alpha=0.85, colour="darkgrey")+
+  geom_errorbar(data=subset(param_all_REP_long, (parameter=="Te_lambda" & Tu_Regime=="SR1" & Environment=="Cd")), aes(ymin=lower, ymax=upper), colour="black", width=0.1)+
+  geom_point(data=subset(param_all_REP_long, (parameter=="Te_lambda" & Tu_Regime=="SR1" & Environment=="Cd")), size=4, shape=21)+
+  theme_ines+
+ scale_x_discrete(labels=c("No cadmium","Cadmium"))+
+  scale_fill_manual(values=c("lightgrey", "black"), labels=c("No cadmium", "Cadmium"), name="")+
+  ylab("Intrinsic growth rate\n(T. evansi)")+
+  xlab("T. evansi selection regime")+ theme(legend.position = "None")
+
+Te_intra_ev<-ggplot(data=subset(param_all_REP_long, (parameter=="Te_intra" & Tu_Regime=="SR1" & Environment=="Cd")), aes(fill=Te_Regime, y=value, x=Te_Regime))+
+    geom_hline(yintercept = 0, colour="lightgray", linetype="dashed")+
+  geom_errorbar(data=subset(param_all_w0_long, (parameter=="Te_intra" & Tu_Regime=="SR1" & Environment=="Cd")), aes(y=value, x=Te_Regime, ymin=lower, ymax=upper), position=position_dodge2(width=0.3), colour="grey", width=0.3)+
+  geom_point(data=subset(param_all_w0_long, (parameter=="Te_intra" & Tu_Regime=="SR1" & Environment=="Cd")), position=position_dodge2(width=0.3), size=2, shape=24,aes(fill=Te_Regime, y=value, x=Te_Regime), alpha=0.85, colour="darkgrey")+
+  geom_errorbar(data=subset(param_all_REP_long, (parameter=="Te_intra" & Tu_Regime=="SR1" & Environment=="Cd")), aes(ymin=lower, ymax=upper), colour="black", width=0.1)+
+  geom_point(data=subset(param_all_REP_long, (parameter=="Te_intra" & Tu_Regime=="SR1" & Environment=="Cd")), size=4, shape=21)+
+  theme_ines+
+ scale_x_discrete(labels=c("No cadmium","Cadmium"))+
+  scale_fill_manual(values=c("lightgrey", "black"), labels=c("No cadmium", "Cadmium"), name="")+
+  ylab("Strength of intraspecific\ncompetition (T. evansi)")+
+  xlab("T. evansi selection regime")+theme(legend.position = "None")
+
+
+Te_inter_ev<-ggplot(data=subset(param_all_REP_long, (parameter=="Te_inter" & Environment=="Cd")), aes(fill=interaction(Te_Regime,Tu_Regime), y=value, x=Te_Regime))+
+    geom_hline(yintercept = 0, colour="lightgray", linetype="dashed")+
+  geom_errorbar(data=subset(param_all_w0_long, (parameter=="Te_inter" & Environment=="Cd")), aes(y=value, x=Te_Regime, ymin=lower, ymax=upper), position=position_dodge2(width=0.3), colour="grey", width=0.3)+
+  geom_point(data=subset(param_all_w0_long, (parameter=="Te_inter"  & Environment=="Cd")), position=position_dodge2(width=0.3), size=2, shape=24,aes(fill=interaction(Te_Regime,Tu_Regime), y=value, x=Te_Regime), alpha=0.85, colour="darkgrey")+
+  geom_errorbar(data=subset(param_all_REP_long, (parameter=="Te_inter" & Environment=="Cd")), aes(ymin=lower, ymax=upper),position=position_dodge2(0.3), colour="black", width=0.3)+
+  geom_point(data=subset(param_all_REP_long, (parameter=="Te_inter" & Environment=="Cd")),position=position_dodge2(0.3), size=4, shape=21)+
+  theme_ines+
+ scale_x_discrete(labels=c("No cadmium","Cadmium"))+
+  scale_fill_manual(values=c("#D7191C", "#FDAE61" ,"#ABDDA4", "#2B83BA"), labels=c("Te no cadmium:Tu no cadmium", "Te cadmium: Tu no cadmium", "Te no cadmium: Tu cadmium", "Te cadmium: Tu cadmium"), name="")+
+  #scale_fill_brewer(palette = "Spectral", labels=c("Te no cadmium:Tu no cadmium", "Te cadmium:Tu no cadmium", "Te no cadmium:Tu cadmium", "Te cadmium:Tu cadmium"), name="")+
+  guides(fill=guide_legend(nrow = 4))+
+  theme(legend.position = "None", legend.text = element_text(size=10), legend.background = element_rect(fill=NA), legend.key.size = unit(0.2, 'cm'))+
+  ylab("Strength of interspecific\ncompetition (T. evansi)")+
+  xlab("T. evansi selection regime")
+
+plot_grid(Te_gr_ev, Tu_gr_ev, labels=c("A", "B"))
+save_plot("./Plots/FigS2.pdf", width=30, height=15)
+save_plot("./Plots/FigS2.png", width=30, height=15)
+
+plot_grid(Te_intra_ev, Tu_intra_ev, labels=c("A", "B"))
+save_plot("./Plots/FigS3.pdf", width=30, height=15)
+save_plot("./Plots/FigS3.png", width=30, height=15)
+
+plot_grid(Te_inter_ev, Tu_inter_ev, labels=c("A", "B"))
+
+save_plot("./Plots/FigS4.pdf", width=30, height=15)
+save_plot("./Plots/FigS4.png", width=30, height=15)
+
+
+#### Ancestral env
+
+Tu_gr_ev_N<-ggplot(data=subset(param_all_REP_long, (parameter=="Tu_lambda" & Te_Regime=="SR4" & Environment=="N")), aes(fill=Tu_Regime, y=value, x=Tu_Regime))+
+    geom_hline(yintercept = 1, colour="lightgray", linetype="dashed")+
+  geom_errorbar(data=subset(param_all_w0_long, (parameter=="Tu_lambda" & Te_Regime=="SR4" & Environment=="N")), aes(y=value, x=Tu_Regime, ymin=lower, ymax=upper), position=position_dodge2(width=0.3), colour="grey", width=0.3)+
+  geom_point(data=subset(param_all_w0_long, (parameter=="Tu_lambda" & Te_Regime=="SR4" & Environment=="N")), position=position_dodge2(width=0.3), size=2, shape=24,aes(fill=Tu_Regime, y=value, x=Tu_Regime), alpha=0.85, colour="darkgrey")+
+  geom_errorbar(data=subset(param_all_REP_long, (parameter=="Tu_lambda" & Te_Regime=="SR4" & Environment=="N")), aes(ymin=lower, ymax=upper), colour="black", width=0.1)+
+  geom_point(data=subset(param_all_REP_long, (parameter=="Tu_lambda" & Te_Regime=="SR4" & Environment=="N")), size=4, shape=21)+
+  theme_ines+
+ scale_x_discrete(labels=c("No cadmium","Cadmium"))+
+  scale_fill_manual(values=c("lightgrey", "black"), labels=c("No cadmium", "Cadmium"), name="")+
+  ylab("Intrinsic growth rate\n(T. urticae)")+
+  xlab("T. urticae selection regime")+theme(legend.position = "None")
+
+Tu_intra_ev_N<-ggplot(data=subset(param_all_REP_long, (parameter=="Tu_intra" & Te_Regime=="SR4" & Environment=="N")), aes(fill=Tu_Regime, y=value, x=Tu_Regime))+
+    geom_hline(yintercept = 0, colour="lightgray", linetype="dashed")+
+  geom_errorbar(data=subset(param_all_w0_long, (parameter=="Tu_intra" & Te_Regime=="SR4" & Environment=="N")), aes(y=value, x=Tu_Regime, ymin=lower, ymax=upper), position=position_dodge2(width=0.3), colour="grey", width=0.3)+
+  geom_point(data=subset(param_all_w0_long, (parameter=="Tu_intra" & Te_Regime=="SR4" & Environment=="N")), position=position_dodge2(width=0.3), size=2, shape=24,aes(fill=Tu_Regime, y=value, x=Tu_Regime), alpha=0.85, colour="darkgrey")+
+  geom_errorbar(data=subset(param_all_REP_long, (parameter=="Tu_intra" & Te_Regime=="SR4" & Environment=="N")), aes(ymin=lower, ymax=upper), colour="black", width=0.1)+
+  geom_point(data=subset(param_all_REP_long, (parameter=="Tu_intra" & Te_Regime=="SR4" & Environment=="N")), size=4, shape=21)+
+  theme_ines+
+ scale_x_discrete(labels=c("No cadmium","Cadmium"))+
+  scale_fill_manual(values=c("lightgrey", "black"), labels=c("No cadmium", "Cadmium"), name="")+
+  ylab("Strength of intraspecific\ncompetition (T. urticae)")+
+  xlab("T. urticae selection regime")+theme(legend.position = "None")
+
+
+Tu_inter_ev_N<-ggplot(data=subset(param_all_REP_long, (parameter=="Tu_inter" & Environment=="N")), aes(fill=interaction(Te_Regime,Tu_Regime), y=value, x=Tu_Regime))+
+    geom_hline(yintercept = 0, colour="lightgray", linetype="dashed")+
+  geom_errorbar(data=subset(param_all_w0_long, (parameter=="Tu_inter" & Environment=="N")), aes(y=value, x=Tu_Regime, ymin=lower, ymax=upper), position=position_dodge2(width=0.3), colour="grey", width=0.3)+
+  geom_point(data=subset(param_all_w0_long, (parameter=="Tu_inter"  & Environment=="N")), position=position_dodge2(width=0.3), size=2, shape=24,aes(fill=interaction(Te_Regime,Tu_Regime), y=value, x=Tu_Regime), alpha=0.85, colour="darkgrey")+
+  geom_errorbar(data=subset(param_all_REP_long, (parameter=="Tu_inter" & Environment=="N")), aes(ymin=lower, ymax=upper),position=position_dodge2(0.3), colour="black", width=0.3)+
+  geom_point(data=subset(param_all_REP_long, (parameter=="Tu_inter" & Environment=="N")),position=position_dodge2(0.3), size=4, shape=21)+
+  theme_ines+
+ scale_x_discrete(labels=c("No cadmium","Cadmium"))+
+  #scale_fill_brewer(palette = "Spectral", labels=c("Te no cadmium:Tu no cadmium", "Te cadmium:Tu no cadmium", "Te no cadmium:Tu cadmium", "Te cadmium:Tu cadmium"), name="")+
+  scale_fill_manual(values=c("#D7191C", "#FDAE61" ,"#ABDDA4", "#2B83BA"), labels=c("Te no cadmium:Tu no cadmium", "Te cadmium: Tu no cadmium", "Te no cadmium: Tu cadmium", "Te cadmium: Tu cadmium"), name="")+
+  ylab("Strength of interspecific\ncompetition (T. urticae)")+
+  xlab("T. urticae selection regime")+
+  guides(fill=guide_legend(nrow = 4))+
+  theme(legend.position = "None", legend.text = element_text(size=10), legend.background = element_rect(fill=NA), legend.key.size = unit(0.2, 'cm'))
+
+Te_gr_ev_N<-ggplot(data=subset(param_all_REP_long, (parameter=="Te_lambda" & Tu_Regime=="SR1" & Environment=="N")), aes(fill=Te_Regime, y=value, x=Te_Regime))+
+    geom_hline(yintercept = 1, colour="lightgray", linetype="dashed")+
+  geom_errorbar(data=subset(param_all_w0_long, (parameter=="Te_lambda" & Tu_Regime=="SR1" & Environment=="N")), aes(y=value, x=Te_Regime, ymin=lower, ymax=upper), position=position_dodge2(width=0.3), colour="grey", width=0.3)+
+  geom_point(data=subset(param_all_w0_long, (parameter=="Te_lambda" & Tu_Regime=="SR1" & Environment=="N")), position=position_dodge2(width=0.3), size=2, shape=24,aes(fill=Te_Regime, y=value, x=Te_Regime), alpha=0.85, colour="darkgrey")+
+  geom_errorbar(data=subset(param_all_REP_long, (parameter=="Te_lambda" & Tu_Regime=="SR1" & Environment=="N")), aes(ymin=lower, ymax=upper), colour="black", width=0.1)+
+  geom_point(data=subset(param_all_REP_long, (parameter=="Te_lambda" & Tu_Regime=="SR1" & Environment=="N")), size=4, shape=21)+
+  theme_ines+
+ scale_x_discrete(labels=c("No cadmium","Cadmium"))+
+  scale_fill_manual(values=c("lightgrey", "black"), labels=c("No cadmium", "Cadmium"), name="")+
+  ylab("Intrinsic growth rate\n(T. evansi)")+
+  xlab("T. evansi selection regime")+ theme(legend.position = "None")
+
+Te_intra_ev_N<-ggplot(data=subset(param_all_REP_long, (parameter=="Te_intra" & Tu_Regime=="SR1" & Environment=="N")), aes(fill=Te_Regime, y=value, x=Te_Regime))+
+    geom_hline(yintercept = 0, colour="lightgray", linetype="dashed")+
+  geom_errorbar(data=subset(param_all_w0_long, (parameter=="Te_intra" & Tu_Regime=="SR1" & Environment=="N")), aes(y=value, x=Te_Regime, ymin=lower, ymax=upper), position=position_dodge2(width=0.3), colour="grey", width=0.3)+
+  geom_point(data=subset(param_all_w0_long, (parameter=="Te_intra" & Tu_Regime=="SR1" & Environment=="N")), position=position_dodge2(width=0.3), size=2, shape=24,aes(fill=Te_Regime, y=value, x=Te_Regime), alpha=0.85, colour="darkgrey")+
+  geom_errorbar(data=subset(param_all_REP_long, (parameter=="Te_intra" & Tu_Regime=="SR1" & Environment=="N")), aes(ymin=lower, ymax=upper), colour="black", width=0.1)+
+  geom_point(data=subset(param_all_REP_long, (parameter=="Te_intra" & Tu_Regime=="SR1" & Environment=="N")), size=4, shape=21)+
+  theme_ines+
+ scale_x_discrete(labels=c("No cadmium","Cadmium"))+
+  scale_fill_manual(values=c("lightgrey", "black"), labels=c("No cadmium", "Cadmium"), name="")+
+  ylab("Strength of intraspecific\ncompetition (T. evansi)")+
+  xlab("T. evansi selection regime")+theme(legend.position = "None")
+
+
+Te_inter_ev_N<-ggplot(data=subset(param_all_REP_long, (parameter=="Te_inter" & Environment=="N")), aes(fill=interaction(Te_Regime,Tu_Regime), y=value, x=Te_Regime))+
+    geom_hline(yintercept = 0, colour="lightgray", linetype="dashed")+
+  geom_errorbar(data=subset(param_all_w0_long, (parameter=="Te_inter" & Environment=="N")), aes(y=value, x=Te_Regime, ymin=lower, ymax=upper), position=position_dodge2(width=0.3), colour="grey", width=0.3)+
+  geom_point(data=subset(param_all_w0_long, (parameter=="Te_inter"  & Environment=="N")), position=position_dodge2(width=0.3), size=2, shape=24,aes(fill=interaction(Te_Regime,Tu_Regime), y=value, x=Te_Regime), alpha=0.85, colour="darkgrey")+
+  geom_errorbar(data=subset(param_all_REP_long, (parameter=="Te_inter" & Environment=="N")), aes(ymin=lower, ymax=upper),position=position_dodge2(0.3), colour="black", width=0.3)+
+  geom_point(data=subset(param_all_REP_long, (parameter=="Te_inter" & Environment=="N")),position=position_dodge2(0.3), size=4, shape=21)+
+  theme_ines+
+ scale_x_discrete(labels=c("No cadmium","Cadmium"))+
+  scale_fill_manual(values=c("#D7191C", "#FDAE61" ,"#ABDDA4", "#2B83BA"), labels=c("Te no cadmium:Tu no cadmium", "Te cadmium: Tu no cadmium", "Te no cadmium: Tu cadmium", "Te cadmium: Tu cadmium"), name="")+
+  #scale_fill_brewer(palette = "Spectral", labels=c("Te no cadmium:Tu no cadmium", "Te cadmium:Tu no cadmium", "Te no cadmium:Tu cadmium", "Te cadmium:Tu cadmium"), name="")+
+  guides(fill=guide_legend(nrow = 4))+
+  theme(legend.position = "None", legend.text = element_text(size=10), legend.background = element_rect(fill=NA), legend.key.size = unit(0.2, 'cm'))+
+  ylab("Strength of interspecific\ncompetition (T. evansi)")+
+  xlab("T. evansi selection regime")
+
+plot_grid(Te_gr_ev_N, Tu_gr_ev_N, labels=c("A", "B"))
+save_plot("./Plots/FigS5.pdf", width=30, height=15)
+save_plot("./Plots/FigS5.png", width=30, height=15)
+
+plot_grid(Te_intra_ev_N, Tu_intra_ev_N, labels=c("A", "B"))
+save_plot("./Plots/FigS6.pdf", width=30, height=15)
+save_plot("./Plots/FigS6.png", width=30, height=15)
+
+plot_grid(Te_inter_ev_N, Tu_inter_ev_N, labels=c("A", "B"))
+
+save_plot("./Plots/FigS7.pdf", width=30, height=15)
+save_plot("./Plots/FigS7.png", width=30, height=15)
+```
+
+
+
+
+## 2.3 - Testing differences in parameters (estimated)
+
+
+#### 2.3.1 - Distribution
+
+```{r}
+str(param_all_w0)
+
+descdist(param_all_w0$Tu_lambda, discrete=FALSE, boot=1000)
+descdist(param_all_w0$Te_lambda, discrete=FALSE, boot=1000)
+
+descdist(param_all_w0$Tu_intra, discrete=FALSE, boot=1000)
+descdist(param_all_w0$Te_intra, discrete=FALSE, boot=1000)
+
+descdist(param_all_w0$Tu_inter, discrete=FALSE, boot=1000)
+descdist(param_all_w0$Te_inter, discrete=FALSE, boot=1000)
+
+
+plot(fitdist(param_all_w0$Tu_lambda, distr="gamma"))
+plot(fitdist(param_all_w0$Tu_lambda, distr="norm"))
+plot(fitdist(param_all_w0$Tu_lambda, distr="weibull"))
+plot(fitdist(log(param_all_w0$Tu_lambda+1), distr="norm"))
+
+
+
+boxcox(glm(param_all_w0$Tu_lambda~1))# 1/sqrt
+
+plot(fitdist(1/sqrt(param_all_w0$Tu_lambda), distr="norm"))
+shapiro.test(1/sqrt(param_all_w0$Tu_lambda))
+
+boxcox(glm(param_all_w0$Te_lambda~1))# 1/sqrt
+
+plot(fitdist(log(param_all_w0$Tu_lambda), distr="norm"))
+shapiro.test(log(param_all_w0$Tu_lambda))
+
+plot(fitdist(param_all_w0$Tu_intra+1, distr="gamma"))
+plot(fitdist(param_all_w0$Tu_intra, distr="norm"))
+plot(fitdist(param_all_w0$Tu_intra+1, distr="weibull"))
+plot(fitdist(log(param_all_w0$Tu_intra+1), distr="norm"))
+
+shapiro.test(param_all_w0$Tu_lambda)
+shapiro.test(param_all_w0$Tu_lambda)
+
+boxcox(glm(param_all_w0$Te_lambda~1))# 1/sqrt
+
+plot(fitdist(log(param_all_w0$Tu_lambda), distr="norm"))
+shapiro.test(log(param_all_w0$Tu_lambda))
+
+
+hist(param_all_w0$Te_lambda)
+
+hist(param_all_w0$Tu_intra)
+hist(param_all_w0$Te_intra)
+
+hist(param_all_w0$Tu_inter)
+hist(param_all_w0$Te_inter)
+```
+
+#### 2.3.2 - Does cadmium change parameters?
+
+```{r}
+
+gr_tu_cd_1<-glmmTMB(Tu_lambda~Environment, data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ))
+gr_tu_cd_2<-glmmTMB(Tu_lambda~Environment, data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ), family=Gamma(link="log"))
+gr_tu_cd_3<-glmmTMB(Tu_lambda~Environment, data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ), family=gaussian(link="log"))
+anova(gr_tu_cd_1,gr_tu_cd_2,gr_tu_cd_3)
+
+summary(gr_tu_cd_2)
+
+simulationOutput <- simulateResiduals(fittedModel = gr_tu_cd_2, plot = F)
+plot(simulationOutput)
+#No problems
+
+gr_te_cd_1<-glmmTMB(Te_lambda~Environment,  data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ))
+gr_te_cd_2<-glmmTMB(Te_lambda~Environment,  data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ), family=Gamma(link="log"))
+gr_te_cd_3<-glmmTMB(Te_lambda~Environment,  data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ), family=gaussian(link="log"))
+anova(gr_te_cd_1,gr_te_cd_2,gr_te_cd_3)
+
+summary(gr_te_cd_2)
+simulationOutput <- simulateResiduals(fittedModel = gr_te_cd_2, plot = F)
+plot(simulationOutput)# No problems
+
+########
+
+intra_tu_cd_1<-glmmTMB(Tu_intra~Environment,  data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ))
+intra_tu_cd_2<-glmmTMB(Tu_intra+1~Environment,  data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ), family=Gamma(link="log"))
+intra_tu_cd_3<-glmmTMB(Tu_intra+1~Environment,  data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ), family=gaussian(link="log"))
+anova(intra_tu_cd_1,intra_tu_cd_2,intra_tu_cd_3)
+
+summary(intra_tu_cd_1) 
+summary(intra_tu_cd_2) #### But added +1 to all data
+
+simulationOutput <- simulateResiduals(fittedModel = intra_tu_cd_1, plot = F)
+plot(simulationOutput)# No problems
+
+
+
+#Gamma and gaussian give very similar estimates and values
+intra_te_cd_1<-glmmTMB(Te_intra~Environment,  data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ))
+intra_te_cd_2<-glmmTMB(Te_intra+1~Environment,  data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ), family=Gamma(link="log"))
+intra_te_cd_3<-glmmTMB(Te_intra+1~Environment,  data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ), family=gaussian(link="log"))
+anova(intra_te_cd_1,intra_te_cd_2,intra_te_cd_3)
+
+summary(intra_te_cd_2)
+summary(intra_te_cd_1) #Again very similar estimates
+
+simulationOutput <- simulateResiduals(fittedModel = intra_te_cd_1, plot = F)
+plot(simulationOutput) #No problems
+
+######
+inter_tu_cd_1<-glmmTMB(Tu_inter~Environment, data=subset(param_all_w0, (Tu_Regime=="SR1" & Te_Regime=="SR4")))
+inter_tu_cd_2<-glmmTMB(Tu_inter+1~Environment, data=subset(param_all_w0, (Tu_Regime=="SR1" & Te_Regime=="SR4")), family=Gamma(link="log"))
+inter_tu_cd_3<-glmmTMB(Tu_inter+1~Environment, data=subset(param_all_w0, (Tu_Regime=="SR1" & Te_Regime=="SR4")), family=gaussian(link="log"))
+anova(inter_tu_cd_1,inter_tu_cd_2,inter_tu_cd_3)
+
+summary(inter_tu_cd_2)
+summary(inter_tu_cd_1)
+
+simulationOutput <- simulateResiduals(fittedModel = inter_tu_cd_1, plot = F)
+plot(simulationOutput) #no problems
+
+inter_te_cd_1<-glmmTMB(Te_inter~Environment, data=subset(param_all_w0, (Tu_Regime=="SR1" & Te_Regime=="SR4")))
+inter_te_cd_2<-glmmTMB(Te_inter+1~Environment, data=subset(param_all_w0, (Tu_Regime=="SR1" & Te_Regime=="SR4")), family=Gamma(link="log"))
+inter_te_cd_3<-glmmTMB(Te_inter+1~Environment, data=subset(param_all_w0, (Tu_Regime=="SR1" & Te_Regime=="SR4")), family=gaussian(link="log"))
+anova(inter_te_cd_1,inter_te_cd_2,inter_te_cd_3)
+
+summary(inter_te_cd_2)
+summary(inter_te_cd_1)
+
+simulationOutput <- simulateResiduals(fittedModel = inter_te_cd_1, plot = F)
+plot(simulationOutput) #No problems
+
+```
+
+###### Summary
+```{r}
+summary(gr_tu_cd_2)
+
+summary(gr_te_cd_2)
+
+summary(intra_tu_cd_1) 
+
+summary(intra_te_cd_1)
+
+summary(inter_tu_cd_1)
+
+summary(inter_te_cd_1)
+
+
+Anova(gr_tu_cd_2)
+
+Anova(gr_te_cd_2)
+
+Anova(intra_tu_cd_1) 
+
+Anova(intra_te_cd_1)
+
+Anova(inter_tu_cd_1)
+
+Anova(inter_te_cd_1)
+
+```
+
+
+
+#### 2.3.3 - Does evolution change the performance?
+
+```{r}
+gr_tu_ev_1<-glmmTMB(Tu_lambda~Tu_Regime, data=subset(param_all_w0, Environment=="Cd" & Te_Regime=="SR4"))
+gr_tu_ev_2<-glmmTMB(Tu_lambda~Tu_Regime, data=subset(param_all_w0, Environment=="Cd"& Te_Regime=="SR4"), family=Gamma(link="log"))
+gr_tu_ev_3<-glmmTMB(Tu_lambda~Tu_Regime, data=subset(param_all_w0, Environment=="Cd"& Te_Regime=="SR4"), family=gaussian(link="log"))
+anova(gr_tu_ev_1,gr_tu_ev_2,gr_tu_ev_3)
+
+summary(gr_tu_ev_2)
+summary(gr_tu_ev_1)
+
+simulationOutput <- simulateResiduals(fittedModel = gr_tu_ev_2, plot = F)
+plot(simulationOutput) #no problems
+
+gr_te_ev_1<-glmmTMB(Te_lambda~Te_Regime, data=subset(param_all_w0, Environment=="Cd"& Tu_Regime=="SR1"))
+gr_te_ev_2<-glmmTMB(Te_lambda~Te_Regime, data=subset(param_all_w0, Environment=="Cd"& Tu_Regime=="SR1"), family=Gamma(link="log"))
+gr_te_ev_3<-glmmTMB(Te_lambda~Te_Regime, data=subset(param_all_w0, Environment=="Cd"& Tu_Regime=="SR1"), family=gaussian(link="log"))
+anova(gr_te_ev_1,gr_te_ev_2,gr_te_ev_3)
+
+summary(gr_te_ev_2)
+summary(gr_te_ev_1)
+
+simulationOutput <- simulateResiduals(fittedModel = gr_te_ev_2, plot = F)
+plot(simulationOutput)# No problems
+
+## intra
+
+intra_tu_ev_1<-glmmTMB(Tu_intra~Tu_Regime, data=subset(param_all_w0, Environment=="Cd"& Te_Regime=="SR4"))
+intra_tu_ev_2<-glmmTMB(Tu_intra+1~Tu_Regime, data=subset(param_all_w0, Environment=="Cd"& Te_Regime=="SR4"), family=Gamma(link="log"))
+intra_tu_ev_3<-glmmTMB(Tu_intra+1~Tu_Regime, data=subset(param_all_w0, Environment=="Cd"& Te_Regime=="SR4"), family=gaussian(link="log"))
+anova(intra_tu_ev_1,intra_tu_ev_2,intra_tu_ev_3)
+
+summary(intra_tu_ev_2)
+summary(intra_tu_ev_1)
+
+simulationOutput <- simulateResiduals(fittedModel = intra_tu_ev_1, plot = F)
+plot(simulationOutput) #no problems
+
+intra_te_ev_1<-glmmTMB(Te_intra~Te_Regime, data=subset(param_all_w0, Environment=="Cd"& Tu_Regime=="SR1"))
+intra_te_ev_2<-glmmTMB(Te_intra+1~Te_Regime, data=subset(param_all_w0, Environment=="Cd"& Tu_Regime=="SR1"), family=Gamma(link="log"))
+intra_te_ev_3<-glmmTMB(Te_intra+1~Te_Regime, data=subset(param_all_w0, Environment=="Cd"& Tu_Regime=="SR1"), family=gaussian(link="log"))
+anova(intra_te_ev_1,intra_te_ev_2,intra_te_ev_3)
+
+summary(intra_te_ev_3)
+summary(intra_te_ev_1)
+
+simulationOutput <- simulateResiduals(fittedModel = intra_te_ev_1, plot = F)
+plot(simulationOutput) #no problems
+
+## inter
+
+inter_tu_ev_1<-glmmTMB(Tu_inter~Tu_Regime*Te_Regime, data=subset(param_all_w0, Environment=="Cd"))
+inter_tu_ev_2<-glmmTMB(Tu_inter+1~Tu_Regime*Te_Regime, data=subset(param_all_w0, Environment=="Cd"), family=Gamma(link="log"))
+inter_tu_ev_3<-glmmTMB(Tu_inter+1~Tu_Regime*Te_Regime, data=subset(param_all_w0, Environment=="Cd"), family=gaussian(link="log"))
+anova(inter_tu_ev_1,inter_tu_ev_2,inter_tu_ev_3)
+
+summary(inter_tu_ev_3)
+summary(inter_tu_ev_1)
+
+simulationOutput <- simulateResiduals(fittedModel = inter_tu_ev_1, plot = F)
+plot(simulationOutput) #no problem
+
+pairs(emmeans(inter_tu_ev_1, pairwise~Te_Regime:Tu_Regime), adjust="none")
+
+inter_te_ev_1<-glmmTMB(Te_inter~Te_Regime*Tu_Regime, data=subset(param_all_w0, Environment=="Cd"))
+inter_te_ev_2<-glmmTMB(Te_inter+1~Te_Regime*Tu_Regime, data=subset(param_all_w0, Environment=="Cd"), family=Gamma(link="log"))
+inter_te_ev_3<-glmmTMB(Te_inter+1~Te_Regime*Tu_Regime, data=subset(param_all_w0, Environment=="Cd"), family=gaussian(link="log"))
+anova(inter_te_ev_1,inter_te_ev_2,inter_te_ev_3)
+
+summary(inter_te_ev_3)
+summary(inter_te_ev_1)
+
+pairs(emmeans(inter_te_ev_1, pairwise~Te_Regime:Tu_Regime), adjust="none")
+
+simulationOutput <- simulateResiduals(fittedModel = inter_te_ev_1, plot = F, )
+#plot(simulationOutput)
+plotResiduals(simulationOutput, subset(param_all_w0, Environment=="Cd")$Te_Regime)
+plotResiduals(simulationOutput, subset(param_all_w0, Environment=="Cd")$Tu_Regime)
+
+# No problem
+```
+
+###### Summary
+```{r}
+summary(gr_tu_ev_2)
+
+summary(gr_te_ev_2)
+
+## intra
+
+summary(intra_tu_ev_1)
+
+summary(intra_te_ev_1)
+
+## inter
+
+pairs(emmeans(inter_tu_ev_1, pairwise~Te_Regime:Tu_Regime), adjust="none")
+
+pairs(emmeans(inter_te_ev_1, pairwise~Te_Regime:Tu_Regime), adjust="none")
+
+
+# Anova
+
+Anova(gr_tu_ev_2)
+
+Anova(gr_te_ev_2)
+
+## intra
+
+Anova(intra_tu_ev_1)
+
+Anova(intra_te_ev_1)
+
+## Inter
+Anova(inter_tu_ev_1, type=3)
+
+Anova(inter_te_ev_1, type=3)
+
+```
+
+#### 2.3.4 - Does evolution change the ancestral?
+
+```{r}
+gr_tu_an_1<-glmmTMB(Tu_lambda~Tu_Regime, data=subset(param_all_w0, Environment=="N" & Te_Regime=="SR4"))
+gr_tu_an_2<-glmmTMB(Tu_lambda~Tu_Regime, data=subset(param_all_w0, Environment=="N"& Te_Regime=="SR4"), family=Gamma(link="log"))
+gr_tu_an_3<-glmmTMB(Tu_lambda~Tu_Regime, data=subset(param_all_w0, Environment=="N"& Te_Regime=="SR4"), family=gaussian(link="log"))
+anova(gr_tu_an_1,gr_tu_an_2,gr_tu_an_3)
+
+summary(gr_tu_an_2)
+summary(gr_tu_an_1)
+
+simulationOutput <- simulateResiduals(fittedModel = gr_tu_an_2, plot = F, )
+plot(simulationOutput)# no problem
+
+gr_te_an_1<-glmmTMB(Te_lambda~Te_Regime, data=subset(param_all_w0, Environment=="N"& Tu_Regime=="SR1"))
+gr_te_an_2<-glmmTMB(Te_lambda~Te_Regime, data=subset(param_all_w0, Environment=="N"& Tu_Regime=="SR1"), family=Gamma(link="log"))
+gr_te_an_3<-glmmTMB(Te_lambda~Te_Regime, data=subset(param_all_w0, Environment=="N"& Tu_Regime=="SR1"), family=gaussian(link="log"))
+anova(gr_te_an_1,gr_te_an_2,gr_te_an_3)
+
+summary(gr_te_an_2)
+
+simulationOutput <- simulateResiduals(fittedModel = gr_te_an_2, plot = F, )
+plot(simulationOutput)
+## intra
+
+intra_tu_an_1<-glmmTMB(Tu_intra~Tu_Regime, data=subset(param_all_w0, Environment=="N"& Te_Regime=="SR4"))
+intra_tu_an_2<-glmmTMB(Tu_intra+1~Tu_Regime, data=subset(param_all_w0, Environment=="N"& Te_Regime=="SR4"), family=Gamma(link="log"))
+intra_tu_an_3<-glmmTMB(Tu_intra+1~Tu_Regime, data=subset(param_all_w0, Environment=="N"& Te_Regime=="SR4"), family=gaussian(link="log"))
+anova(intra_tu_an_1,intra_tu_an_2,intra_tu_an_3)
+
+summary(intra_tu_an_3)
+summary(intra_tu_an_1)
+
+simulationOutput <- simulateResiduals(fittedModel = intra_tu_an_1, plot = F, )
+plot(simulationOutput) #no problem
+
+intra_te_an_1<-glmmTMB(Te_intra~Te_Regime, data=subset(param_all_w0, Environment=="N"& Tu_Regime=="SR1"))
+intra_te_an_2<-glmmTMB(Te_intra+1~Te_Regime, data=subset(param_all_w0, Environment=="N"& Tu_Regime=="SR1"), family=Gamma(link="log"))
+intra_te_an_3<-glmmTMB(Te_intra+1~Te_Regime, data=subset(param_all_w0, Environment=="N"& Tu_Regime=="SR1"), family=gaussian(link="log"))
+anova(intra_te_an_1,intra_te_an_2,intra_te_an_3)
+
+summary(intra_te_an_3)
+summary(intra_te_an_1)
+
+simulationOutput <- simulateResiduals(fittedModel = intra_te_an_1, plot = F, )
+plot(simulationOutput)# no problem
+
+
+## inter
+
+inter_tu_an_1<-glmmTMB(Tu_inter~Tu_Regime*Te_Regime, data=subset(param_all_w0, Environment=="N"))
+inter_tu_an_2<-glmmTMB(Tu_inter+1~Tu_Regime*Te_Regime, data=subset(param_all_w0, Environment=="N"), family=Gamma(link="log"))
+inter_tu_an_3<-glmmTMB(Tu_inter+1~Tu_Regime*Te_Regime, data=subset(param_all_w0, Environment=="N"), family=gaussian(link="log"))
+anova(inter_tu_an_1,inter_tu_an_2,inter_tu_an_3)
+
+summary(inter_tu_an_3)
+summary(inter_tu_an_1)
+
+simulationOutput <- simulateResiduals(fittedModel = inter_tu_an_1, plot = F, )
+plot(simulationOutput) # no problem
+
+pairs(emmeans(inter_tu_an_1, pairwise~Te_Regime:Tu_Regime), adjust="none")
+
+inter_te_an_1<-glmmTMB(Te_inter~Te_Regime*Tu_Regime, data=subset(param_all_w0, Environment=="N"))
+inter_te_an_2<-glmmTMB(Te_inter+1~Te_Regime*Tu_Regime, data=subset(param_all_w0, Environment=="N"), family=Gamma(link="log"))
+inter_te_an_3<-glmmTMB(Te_inter+1~Te_Regime*Tu_Regime, data=subset(param_all_w0, Environment=="N"), family=gaussian(link="log"))
+anova(inter_te_an_1,inter_te_an_2,inter_te_an_3)
+
+summary(inter_te_an_2)
+summary(inter_te_an_1)
+
+pairs(emmeans(inter_te_an_1, pairwise~Te_Regime:Tu_Regime), adjust="none")
+
+simulationOutput <- simulateResiduals(fittedModel = inter_te_an_1, plot = F, )
+plot(simulationOutput) # no problems
+
+inter_te_an_1_2<-glmmTMB(Te_inter~Te_Regime+Tu_Regime, data=subset(param_all_w0, Environment=="N"))
+
+summary(inter_te_an_1_2)
+
+pairs(emmeans(inter_te_an_1_2, pairwise~Te_Regime+Tu_Regime), adjust="none")
+
+
+```
+
+###### Summary
+
+```{r}
+summary(gr_tu_an_2)
+
+summary(gr_te_an_2)
+
+
+summary(intra_tu_an_1)
+
+summary(intra_te_an_1)
+
+
+
+pairs(emmeans(inter_tu_an_1, pairwise~Te_Regime:Tu_Regime), adjust="none")
+
+pairs(emmeans(inter_te_an_1, pairwise~Te_Regime:Tu_Regime), adjust="none")
+
+
+Anova(gr_tu_an_2)
+Anova(gr_te_an_2)
+
+Anova(intra_tu_an_1)
+Anova(intra_te_an_1)
+
+Anova(inter_tu_an_1, type=3)
+Anova(inter_te_an_1, type=3)
+
+pairs(emmeans(inter_te_an_1, pairwise~Tu_Regime| Te_Regime), adjust="none")
+
+```
+
+
+# 3 - Predicting coexistence (structural stability)
+
+### 3.1 - Structural stability
+
+### Defining functions
+
+The structural stability approach takes a LV, in the appendix we show how to expand to other type of model_w0s mostly a Beverton Holt function, we did not explore the ricker function, but we suspect it will work equally good, So no worries, we are good to go. Regarding the function to calculate structural niche and fitness differences, These are the functions (omega is niche differences) (theta is fitness differences). For calculating theta you also need to calculate the centroid. The function test feasibility is to know whether a species combination can or can not coexist.
+
+```{r}
+#input parameters:
+#alpha = competition strenght matrix 
+#r = vector of intrinsic growth rates
+
+#structural niche difference (output on a log scale)
+Omega <- function(alpha){
+  n <- nrow(alpha)
+  Sigma <-solve(t(alpha) %*% alpha, tol = 1e-40)
+  d <- pmvnorm(lower = rep(0,n), upper = rep(Inf,n), mean = rep(0,n), sigma = Sigma)
+  out <- log10(d[1]) + n * log10(2)
+  return(out) 
+}
+
+#vector defining the centroid of the feasibility domain
+r_centroid <- function(alpha){
+  n <- nrow(alpha)
+  D <- diag(1/sqrt(diag(t(alpha)%*%alpha)))
+  alpha_n <- alpha %*% D
+  r_c <- rowSums(alpha_n) /n 
+  r_c <- t(t(r_c))
+  return(r_c)
+}
+
+
+#structural fitness difference (in degree)
+theta <- function(alpha,r){
+  r_c <- r_centroid(alpha)
+  out <- acos(sum(r_c*r, na.rm = TRUE)/(sqrt(sum(r^2, na.rm = TRUE))*sqrt(sum(r_c^2, na.rm = TRUE))))*180/pi
+  return(out)
+}
+
+
+#test if a system (alpha and r) is feasible (output 1 = feasible, 0 = not feasible)
+test_feasibility <- function(alpha,r){
+  out <- prod(solve(alpha,r)>0)
+  return(out)
+}
+
+```
+
+### 3.1.1 - estimating structural stability for all replicates
+
+Do not forget that ND are in log scale
+
+```{r}
+#x<-5
+struct_mat_REP<-as.data.frame(t(as.data.frame(sapply(c(1:length(param_all_REP[,1])), function(x){
+  print(x)
+    aux_alpha<-matrix(c(param_all_REP$Te_intra[x],param_all_REP$Te_inter[x],param_all_REP$Tu_inter[x], param_all_REP$Tu_intra[x]), ncol=2, byrow=TRUE)
+  aux_lambda<-c(param_all_REP$Te_lambda[x],param_all_REP$Tu_lambda[x])
+  
+  om<-10^Omega(aux_alpha)
+  tta<-theta(aux_alpha, aux_lambda)
+  feas<- test_feasibility(aux_alpha, aux_lambda)
+  
+  c(om, tta, feas)
+}))))
+
+colnames(struct_mat_REP)<-c("ND", "FD", "Feasibility")
+
+#For the lower we use the higher alphas with lower lambda, and for upper the other way around
+# Since we have facilitation we have to actually test what is the lowest value
+
+struct_mat_REP_L<-as.data.frame(t(as.data.frame(sapply(c(1:length(param_all_REP_lower[,1])), function(x){
+  print(x)
+    aux_alpha<-matrix(c(param_all_REP_upper$Te_intra[x],param_all_REP_upper$Te_inter[x], param_all_REP_upper$Tu_inter[x],param_all_REP_upper$Tu_intra[x]), ncol=2, byrow=TRUE)
+  aux_lambda<-c(param_all_REP_lower$Te_lambda[x],param_all_REP_lower$Tu_lambda[x] )
+  
+  om<-10^Omega(aux_alpha)
+  tta<-theta(aux_alpha, aux_lambda)
+  feas<- test_feasibility(aux_alpha, aux_lambda)
+  
+  c(om, tta, feas)
+}))))
+
+colnames(struct_mat_REP_L)<-c("ND_L", "FD_L", "Feasibility_L")
+
+struct_mat_REP_U<-as.data.frame(t(as.data.frame(sapply(c(1:length(param_all_REP_upper[,1])), function(x){
+  print(x)
+    aux_alpha<-matrix(c(param_all_REP_lower$Te_intra[x],param_all_REP_lower$Te_inter[x],param_all_REP_lower$Tu_inter[x],param_all_REP_lower$Tu_intra[x]), ncol=2, byrow=TRUE)
+  aux_lambda<-c(param_all_REP_upper$Te_lambda[x],param_all_REP_upper$Tu_lambda[x] )
+  
+  om<-10^Omega(aux_alpha)
+  tta<-theta(aux_alpha, aux_lambda)
+  feas<- test_feasibility(aux_alpha, aux_lambda)
+  
+  c(om, tta, feas)
+}))))
+
+colnames(struct_mat_REP_U)<-c("ND_U", "FD_U", "Feasibility_U")
+
+struct_mat_REP<-cbind(param_all_REP, struct_mat_REP,struct_mat_REP_L,struct_mat_REP_U)
+
+# To create the boundaries
+bound_struct_rk_w0<-data.frame(ND=seq(0,2, 0.01))
+bound_struct_rk_w0$FD<-45*bound_struct_rk_w0$ND
+```
+
+### 3.1.2 - estimating structural stability per replicate
+
+```{r}
+
+
+struct_mat_w0<-as.data.frame(t(as.data.frame(sapply(c(1:length(param_all_w0[,1])), function(x){
+  print(x)
+    aux_alpha<-matrix(c(param_all_w0$Te_intra[x],param_all_w0$Te_inter[x],param_all_w0$Tu_inter[x], param_all_w0$Tu_intra[x]), ncol=2, byrow=TRUE)
+  aux_lambda<-c(param_all_w0$Te_lambda[x],param_all_w0$Tu_lambda[x] )
+  
+  om<-10^Omega(aux_alpha)
+  tta<-theta(aux_alpha, aux_lambda)
+  feas<- test_feasibility(aux_alpha, aux_lambda)
+  
+  c(om, tta, feas)
+}))))
+
+colnames(struct_mat_w0)<-c("ND", "FD", "Feasibility")
+
+struct_mat_w0_L<-as.data.frame(t(as.data.frame(sapply(c(1:length(param_all_w0_lower[,1])), function(x){
+  print(x)
+    aux_alpha<-matrix(c(param_all_w0_upper$Te_intra[x],param_all_w0_upper$Te_inter[x],param_all_w0_upper$Tu_inter[x], param_all_w0_upper$Tu_intra[x]), ncol=2, byrow=TRUE)
+  aux_lambda<-c(param_all_w0_lower$Te_lambda[x],param_all_w0_lower$Tu_lambda[x] )
+  
+  om<-10^Omega(aux_alpha)
+  tta<-theta(aux_alpha, aux_lambda)
+  feas<- test_feasibility(aux_alpha, aux_lambda)
+  
+  c(om, tta, feas)
+}))))
+
+colnames(struct_mat_w0_L)<-c("ND_L", "FD_L", "Feasibility_L")
+
+struct_mat_w0_U<-as.data.frame(t(as.data.frame(sapply(c(1:length(param_all_w0_upper[,1])), function(x){
+  print(x)
+    aux_alpha<-matrix(c(param_all_w0_lower$Te_intra[x],param_all_w0_lower$Te_inter[x],param_all_w0_lower$Tu_inter[x], param_all_w0_lower$Tu_intra[x]), ncol=2, byrow=TRUE)
+  aux_lambda<-c(param_all_w0_upper$Te_lambda[x],param_all_w0_upper$Tu_lambda[x] )
+  
+  om<-10^Omega(aux_alpha)
+  tta<-theta(aux_alpha, aux_lambda)
+  feas<- test_feasibility(aux_alpha, aux_lambda)
+  
+  c(om, tta, feas)
+}))))
+
+colnames(struct_mat_w0_U)<-c("ND_U", "FD_U", "Feasibility_U")
+
+struct_mat_w0<-cbind(param_all_w0, struct_mat_w0,struct_mat_w0_L,struct_mat_w0_U)
+
+
+bound_struct_rk_w0<-data.frame(ND=seq(0,2, 0.01))
+bound_struct_rk_w0$FD<-45*bound_struct_rk_w0$ND
+
+str(struct_mat_w0)
+```
+
+
+
+###### Final Figure 2
+
+```{r}
+ggplot(struct_mat_w0, aes(x=ND, y=FD))+
+  facet_grid(.~Environment, scales="free", labeller=labeller(Environment=Env))+
+  geom_ribbon(data=bound_struct_rk_w0, aes(x=ND, ymin=0,ymax=FD), colour="Black", fill="lightgrey", alpha=0.5)+
+  geom_ribbon(data=bound_struct_rk_w0, aes(x=ND, ymin=FD,ymax=175), colour="cornsilk", fill="cornsilk", alpha=0.5)+
+  geom_line(data=bound_struct_rk_w0, aes(x=ND, y=FD), colour="black", linetype="dashed")+
+  geom_point(data=struct_mat_w0, size=2, aes(x=ND, y=FD, fill=interaction(Te_Regime, Tu_Regime)), alpha=0.5, shape=24)+
+  geom_errorbar(data=struct_mat_REP,aes(ymin=FD_L, ymax=FD_U), width=0.1, colour="black")+
+   geom_errorbarh(data=struct_mat_REP,aes(xmin=ND_L, xmax=ND_U), colour="black")+
+  geom_point(data=struct_mat_REP, size=3, aes(x=ND, y=FD, fill=interaction(Te_Regime, Tu_Regime)), shape=21)+
+  theme_bw()+
+  theme_ines+
+  theme(legend.position = "none")+
+    scale_fill_brewer(palette = "Spectral", labels=c("Te no cadmium:Tu no cadmium", "Te cadmium:Tu no cadmium", "Te no cadmium:Tu cadmium", "Te cadmium:Tu cadmium"), name="")+
+  xlab(expression(paste("Predicted offspring production for ", italic("T. urticae"))))+
+  guides(fill=guide_legend(nrow=4))+
+   ylab(c("Structural Fitness Differences"))+
+  xlab(c("Structural niche differences"))
+
+save_plot("./Plots/Fig2.pdf",  width=20, height=10)
+
+
+```
+
+### 3.2 - Distance to the edge and who wins
+
+```{r}
+
+# But structural niche differences cannot be negative, the problem is that its the function is giving log values, base 10!
+
+struct_mat_REP$a21_a11<-struct_mat_REP$Te_inter/struct_mat_REP$Tu_intra
+struct_mat_REP$a22_a12<-struct_mat_REP$Te_intra/struct_mat_REP$Tu_inter
+
+struct_mat_REP$a21_a11_lower<-param_all_REP_lower$Te_inter/param_all_REP_lower$Tu_intra
+struct_mat_REP$a22_a12_lower<-param_all_REP_lower$Te_intra/param_all_REP_lower$Tu_inter
+
+struct_mat_REP$a21_a11_upper<-param_all_REP_upper$Te_inter/param_all_REP_upper$Tu_intra
+struct_mat_REP$a22_a12_upper<-param_all_REP_upper$Te_intra/param_all_REP_upper$Tu_inter
+
+struct_mat_REP$Tu_lambda_lower<-param_all_REP_lower$Tu_lambda
+struct_mat_REP$Te_lambda_lower<-param_all_REP_lower$Te_lambda
+struct_mat_REP$Tu_lambda_upper<-param_all_REP_upper$Tu_lambda
+struct_mat_REP$Te_lambda_upper<-param_all_REP_upper$Te_lambda
+
+```
+
+
+#### Final figure arrows
+
+```{r}
+
+values_to_plot<-c(0,1, 2,3)
+
+struct_mat_REP2<-as.data.frame(expand.grid(values=values_to_plot, Te_Regime=c("SR4", "SR5"), Tu_Regime=c("SR1", "SR2"), Environment=c("N", "Cd")))
+
+struct_mat_REP2$x<-sapply(c(1:dim(struct_mat_REP2)[1]), function(x){
+  a<-subset(struct_mat_REP, Environment==struct_mat_REP2$Environment[x] &
+  Te_Regime==struct_mat_REP2$Te_Regime[x] & Tu_Regime==struct_mat_REP2$Tu_Regime[x])
+  
+  if(struct_mat_REP2$values[x]==0 | struct_mat_REP2$values[x]==3){
+    b<-0
+  }else if(struct_mat_REP2$values[x]==1 & a$Environment[1]=="N"){
+   b<-8/a$a21_a11[1]
+  }else if(struct_mat_REP2$values[x]==2 & a$Environment[1]=="N"){
+    b<-5
+  }else if(struct_mat_REP2$values[x]==1 & a$Environment[1]=="Cd"){
+   b<-8/a$a22_a12[1]
+  }else if(struct_mat_REP2$values[x]==2 & a$Environment[1]=="Cd"){
+    b<-5
+  }
+  
+  b
+})
+
+struct_mat_REP2$y<-sapply(c(1:dim(struct_mat_REP2)[1]), function(x){
+  a<-subset(struct_mat_REP, Environment==struct_mat_REP2$Environment[x] &
+  Te_Regime==struct_mat_REP2$Te_Regime[x] & Tu_Regime==struct_mat_REP2$Tu_Regime[x])
+  
+  if(struct_mat_REP2$values[x]==0 | struct_mat_REP2$values[x]==3){
+    b<-0
+  }else if(struct_mat_REP2$values[x]==1 & a$Environment[1]=="N"){
+   b<-8
+  }else if(struct_mat_REP2$values[x]==2 & a$Environment[1]=="N"){
+    b<-5*a$a22_a12[1]
+  }else if(struct_mat_REP2$values[x]==1 & a$Environment[1]=="Cd"){
+   b<-8
+  }else if(struct_mat_REP2$values[x]==2 & a$Environment[1]=="Cd"){
+    b<-5*a$a21_a11[1]
+  }
+  
+  b
+})
+
+ggplot(subset(struct_mat_REP, Environment=="N"), aes(x=Tu_lambda, y=Te_lambda, colour=interaction(Tu_Regime, Te_Regime)))+
+  facet_grid(Tu_Regime~ Te_Regime, labeller=labeller(Tu_Regime=regimeTu, Te_Regime=regimeTe) )+
+  geom_polygon(data=subset(struct_mat_REP2,Environment=="N"),aes(x=x, y=y), fill="lightgrey", alpha=0.4, colour=NA)+
+  geom_abline(data=subset(struct_mat_REP, Environment=="N"), aes(intercept = 0,slope=a21_a11), colour="black")+
+  geom_abline(data= subset(struct_mat_REP, Environment=="N"), aes(intercept = 0,slope=a22_a12), colour="black")+
+  geom_point(colour="black")+
+  geom_segment(data=subset(struct_mat_REP, Environment=="N" ), aes(xend=Tu_lambda, yend=Te_lambda,x=0, y=0),  arrow=arrow(length = unit(0.3, "cm")), colour="black")+
+  theme_bw()+
+  theme_ines+
+   ylab(c("Intrinsic growth rate T. evansi"))+
+  xlab(c("Intrinsic growth rate T. urticae"))+
+  theme(legend.position = "none")+
+  ylim(c(-10,8))+
+  xlim(c(-10,5))+
+  coord_cartesian(xlim =c(0,2.8), ylim=c(0,6), expand = TRUE)
+save_plot("./Plots/FigS8B.pdf", width=20, height=15)
+
+ggplot(subset(struct_mat_REP, Environment=="Cd"), aes(x=Tu_lambda, y=Te_lambda, colour=interaction(Tu_Regime, Te_Regime)))+
+  facet_grid(Tu_Regime~ Te_Regime, labeller=labeller(Tu_Regime=regimeTu, Te_Regime=regimeTe) )+
+  geom_polygon(data=subset(struct_mat_REP2,Environment=="Cd"),aes(x=x, y=y), fill="lightgrey", alpha=0.4, colour=NA)+
+  geom_abline(data=subset(struct_mat_REP, Environment=="Cd"), aes(intercept = 0,slope=a21_a11), colour="black")+
+  geom_abline(data= subset(struct_mat_REP, Environment=="Cd"), aes(intercept = 0,slope=a22_a12), colour="black")+
+  geom_point(colour="black")+
+  geom_segment(data=subset(struct_mat_REP, Environment=="Cd" ), aes(xend=Tu_lambda, yend=Te_lambda,x=0, y=0),  arrow=arrow(length = unit(0.3, "cm")), colour="black")+
+  theme_bw()+
+  theme_ines+
+   ylab(c("Intrinsic growth rate T. evansi"))+
+  xlab(c("Intrinsic growth rate T. urticae"))+
+  theme(legend.position = "none")+
+  ylim(c(-20,20))+
+  xlim(c(-20,20))+
+  coord_cartesian(xlim =c(0,3), ylim=c(0,5), expand = TRUE)
+save_plot("./Plots/FigS8A.pdf", width=20, height=15)
+
+
+```
+
+
+### per replicate
+
+```{r}
+
+struct_mat_w0$a21_a11<-struct_mat_w0$Te_inter/struct_mat_w0$Tu_intra
+struct_mat_w0$a22_a12<-struct_mat_w0$Te_intra/struct_mat_w0$Tu_inter
+
+struct_mat_w0$a21_a11_lower<-param_all_w0_lower$Te_inter/param_all_w0_lower$Tu_intra
+struct_mat_w0$a22_a12_lower<-param_all_w0_lower$Te_intra/param_all_w0_lower$Tu_inter
+
+struct_mat_w0$a21_a11_upper<-param_all_w0_upper$Te_inter/param_all_w0_upper$Tu_intra
+struct_mat_w0$a22_a12_upper<-param_all_w0_upper$Te_intra/param_all_w0_upper$Tu_inter
+
+
+aux_struct_mat_w0<-as.data.frame(expand.grid(Tu_Regime=c("SR1", "SR2"),Te_Regime=c("SR4", "SR5"), Environment=c("N", "Cd"), Replicate=c(1,2,3,4,5), r=seq(0,10, 0.5)))
+
+aux_struct_mat_w0<-aux_struct_mat_w0[-which(aux_struct_mat_w0$Tu_Regime=="SR2" & aux_struct_mat_w0$Replicate==2),]
+
+aux_struct_mat_w0$slopea21_a11<-sapply(c(1:dim(aux_struct_mat_w0)[1]), function(x){
+  auxi<-subset(struct_mat_w0, Environment==aux_struct_mat_w0$Environment[x] & Replicate==aux_struct_mat_w0$Replicate[x] & Tu_Regime==aux_struct_mat_w0$Tu_Regime[x]  & Te_Regime==aux_struct_mat_w0$Te_Regime[x])$a21_a11
+  
+  a<-auxi*aux_struct_mat_w0$r[x]
+  
+  a
+})
+
+aux_struct_mat_w0$slopea22_a12<-sapply(c(1:dim(aux_struct_mat_w0)[1]), function(x){
+  auxi<-subset(struct_mat_w0, Environment==aux_struct_mat_w0$Environment[x] & Replicate==aux_struct_mat_w0$Replicate[x] & Tu_Regime==aux_struct_mat_w0$Tu_Regime[x]  & Te_Regime==aux_struct_mat_w0$Te_Regime[x])$a22_a12
+  
+  a<-auxi*aux_struct_mat_w0$r[x]
+  
+  a
+})
+
+aux_struct_mat_w0$Tu_lambda<-sapply(c(1:dim(aux_struct_mat_w0)[1]), function(x){
+ subset(struct_mat_w0, Environment==aux_struct_mat_w0$Environment[x] & Replicate==aux_struct_mat_w0$Replicate[x] & Tu_Regime==aux_struct_mat_w0$Tu_Regime[x]  & Te_Regime==aux_struct_mat_w0$Te_Regime[x])$Tu_lambda
+})
+
+aux_struct_mat_w0$Te_lambda<-sapply(c(1:dim(aux_struct_mat_w0)[1]), function(x){
+ subset(struct_mat_w0, Environment==aux_struct_mat_w0$Environment[x] & Replicate==aux_struct_mat_w0$Replicate[x] & Tu_Regime==aux_struct_mat_w0$Tu_Regime[x]  & Te_Regime==aux_struct_mat_w0$Te_Regime[x])$Te_lambda
+})
+
+
+aux_struct_mat_w0$a21_a11<-aux_struct_mat_w0$slopea21_a11
+aux_struct_mat_w0$a22_a12<-aux_struct_mat_w0$slopea22_a12
+```
+
+
+
+
+#### Estimating distance to the edge
+
+### Testing difference to one of the edges of the cone
+
+##### all replicates
+
+```{r}
+# calculating y for the x corresponding to the lambda Tu, in the vector slope
+struct_mat_REP$Tu_lambda[1]*struct_mat_REP$a21_a11[1]
+
+# just to be sure, it is equivalent to use the Te or Tu lambda
+acos(Dot(LSAfun::normalize(c(struct_mat_REP$Tu_lambda[1], struct_mat_REP$Te_lambda[1]))
+,LSAfun::normalize(c(struct_mat_REP$Tu_lambda[1],struct_mat_REP$Tu_lambda[1]*struct_mat_REP$a21_a11[1]))))
+
+acos(Dot(LSAfun::normalize(c(struct_mat_REP$Tu_lambda[1], struct_mat_REP$Te_lambda[1]))
+,LSAfun::normalize(c(struct_mat_REP$Te_lambda[1]/struct_mat_REP$a21_a11[1], struct_mat_REP$Te_lambda[1]))))
+
+#And if I use a random value of 10
+acos(Dot(LSAfun::normalize(c(struct_mat_REP$Tu_lambda[1], struct_mat_REP$Te_lambda[1])),
+LSAfun::normalize(c(10,10*struct_mat_REP$a21_a11[1]))))
+# also ok, so I can just use the lambda's to do this
+
+struct_mat_REP$distanceTu<-sapply(c(1:length(struct_mat_REP$ND)), function(x) acos(Dot(LSAfun::normalize(c(struct_mat_REP$Tu_lambda[x], struct_mat_REP$Te_lambda[x]))
+,LSAfun::normalize(c(struct_mat_REP$Tu_lambda[x],struct_mat_REP$Tu_lambda[x]*struct_mat_REP$a21_a11[x])))))
+
+struct_mat_REP$distanceTe<-sapply(c(1:length(struct_mat_REP$ND)), function(x) acos(Dot(LSAfun::normalize(c(struct_mat_REP$Tu_lambda[x], struct_mat_REP$Te_lambda[x]))
+,LSAfun::normalize(c(struct_mat_REP$Te_lambda[x]/struct_mat_REP$a22_a12[x],struct_mat_REP$Te_lambda[x])))))
+
+```
+
+
+##### per replicate
+
+```{r}
+# calculating y for the x corresponding to the lambda Tu, in the vector slope
+struct_mat_w0$Tu_lambda[1]*struct_mat_w0$a21_a11[1]
+
+# just to be sure, it is equivalent to use the Te or Tu lambda
+acos(Dot(LSAfun::normalize(c(struct_mat_w0$Tu_lambda[1], struct_mat_w0$Te_lambda[1]))
+,LSAfun::normalize(c(struct_mat_w0$Tu_lambda[1],struct_mat_w0$Tu_lambda[1]*struct_mat_w0$a21_a11[1]))))
+
+acos(Dot(LSAfun::normalize(c(struct_mat_w0$Tu_lambda[1], struct_mat_w0$Te_lambda[1]))
+,LSAfun::normalize(c(struct_mat_w0$Te_lambda[1]/struct_mat_w0$a21_a11[1], struct_mat_w0$Te_lambda[1]))))
+
+#And if I use a random value of 10
+acos(Dot(LSAfun::normalize(c(struct_mat_w0$Tu_lambda[1], struct_mat_w0$Te_lambda[1])),
+LSAfun::normalize(c(10,10*struct_mat_w0$a21_a11[1]))))
+# also ok, so I can just use the lambda's to do this
+
+struct_mat_w0$distanceTu<-sapply(c(1:length(struct_mat_w0$ND)), function(x) acos(Dot(LSAfun::normalize(c(struct_mat_w0$Tu_lambda[x], struct_mat_w0$Te_lambda[x]))
+,LSAfun::normalize(c(struct_mat_w0$Tu_lambda[x],struct_mat_w0$Tu_lambda[x]*struct_mat_w0$a21_a11[x])))))
+
+struct_mat_w0$distanceTe<-sapply(c(1:length(struct_mat_w0$ND)), function(x) acos(Dot(LSAfun::normalize(c(struct_mat_w0$Tu_lambda[x], struct_mat_w0$Te_lambda[x]))
+,LSAfun::normalize(c(struct_mat_w0$Te_lambda[x]/struct_mat_w0$a22_a12[x],struct_mat_w0$Te_lambda[x])))))
+
+# Putting distance as negative if the system is unfeasible (i.e. if there is no coexistence, because then they are outside of the feasibility cone)
+struct_mat_w0$distanceTu2<-sapply(c(1:length(struct_mat_w0$ND)), function(x){
+  if(struct_mat_w0$Feasibility[x]==0)
+    a<-struct_mat_w0$distanceTu[x]*-1
+  else
+    a<-struct_mat_w0$distanceTu[x]
+  
+  a
+  })
+
+struct_mat_w0$distanceTe2<-sapply(c(1:length(struct_mat_w0$ND)), function(x){
+  if(struct_mat_w0$Feasibility[x]==0)
+    a<-struct_mat_w0$distanceTe[x]*-1
+  else
+    a<-struct_mat_w0$distanceTe[x]
+  
+  a
+  })
+
+struct_mat_REP$distanceTu2<-sapply(c(1:length(struct_mat_REP$ND)), function(x){
+  if(struct_mat_REP$Feasibility[x]==0)
+    a<-struct_mat_REP$distanceTu[x]*-1
+  else
+    a<-struct_mat_REP$distanceTu[x]
+  
+  a
+  })
+
+struct_mat_REP$distanceTe2<-sapply(c(1:length(struct_mat_REP$ND)), function(x){
+  if(struct_mat_REP$Feasibility[x]==0)
+    a<-struct_mat_REP$distanceTe[x]*-1
+  else
+    a<-struct_mat_REP$distanceTe[x]
+  
+  a
+  })
+```
+
+##### per replicate
+
+```{r}
+
+struct_mat_w0$minDistance<-sapply(c(1:length(struct_mat_w0$ND)), function(x){
+  min( c(struct_mat_w0$distanceTu[x], struct_mat_w0$distanceTe[x]))
+ 
+})
+
+struct_mat_w0$minDistance2<-sapply(c(1:length(struct_mat_w0$ND)), function(x){
+  a<-min( c(abs(struct_mat_w0$distanceTu2[x]), abs(struct_mat_w0$distanceTe2[x])))
+ 
+  if(struct_mat_w0$Feasibility[x]==0)
+    a2<-a*-1
+  else
+    a2<-a
+})
+
+struct_mat_REP$minDistance2<-sapply(c(1:length(struct_mat_REP$ND)), function(x){
+  a<-min( c(abs(struct_mat_REP$distanceTu2[x]), abs(struct_mat_REP$distanceTe2[x])))
+  if(struct_mat_REP$Feasibility[x]==0)
+     a2<-a*-1
+  else
+    a2<-a
+})
+
+```
+
+#### checking which is the shortest distance
+```{r}
+#struct_mat_REP<-struct_mat_REP[,-19]
+
+struct_mat_REP$minDistance<-sapply(c(1:length(struct_mat_REP$ND)), function(x){
+  min( c(struct_mat_REP$distanceTu[x], struct_mat_REP$distanceTe[x]))
+ 
+})
+
+struct_mat_w0$minDistance<-sapply(c(1:length(struct_mat_w0$ND)), function(x){
+  min( c(struct_mat_w0$distanceTu[x], struct_mat_w0$distanceTe[x]))
+ 
+})
+
+```
+
+##### Final figure 3 and S9
+
+```{r}
+
+ggplot_distTe<-ggplot(struct_mat_REP, aes(x=interaction(Tu_Regime, Te_Regime), fill=interaction(Tu_Regime, Te_Regime)))+
+  facet_grid(Environment~., labeller=labeller(Environment=Env))+
+  geom_hline(yintercept = 0, colour="lightgrey", linetype="dashed")+
+  geom_point(data=struct_mat_w0, size=2, shape=24, position=position_dodge2(0.5), colour="black", alpha=0.35, aes(y=distanceTe2))+
+  geom_point(data=struct_mat_REP, size=3, position=position_dodge2(0.5), shape=21, colour="black", aes(y=distanceTe2))+
+  theme_bw()+
+  theme_ines+
+  scale_x_discrete(labels=c("Te no cadmium\nTu no cadmium","Te cadmium\nTu no cadmium","Te no cadmium\nTu cadmium","Te cadmium\nTu cadmium"))+
+  ylab("Distance to \n the T. evansi edge")+
+    scale_fill_brewer(palette = "Spectral", labels=c("Te no cadmium:Tu no cadmium", "Te cadmium:Tu no cadmium", "Te no cadmium:Tu cadmium", "Te cadmium:Tu cadmium"), name="")+
+  guides(fill=guide_legend(nrow=2))+
+  xlab("")+
+  theme(legend.position = "bottom", strip.background =element_rect(colour="white"), panel.border = element_rect(colour="black"), axis.text.x = element_text(size=12, angle = 45, vjust = 0.63))
+
+ggplot_distTu<-ggplot(struct_mat_REP, aes(x=interaction(Tu_Regime, Te_Regime), fill=interaction(Tu_Regime, Te_Regime)))+
+  facet_grid(Environment~., labeller=labeller(Environment=Env))+
+  geom_hline(yintercept = 0, colour="lightgrey", linetype="dashed")+
+  geom_point(data=struct_mat_w0, size=2, shape=24, position=position_dodge2(0.5), colour="black", alpha=0.35, aes(y=distanceTu2))+
+  geom_point(data=struct_mat_REP, size=3, position=position_dodge2(0.5), shape=21, colour="black", aes(y=distanceTu2))+
+  theme_bw()+
+  theme_ines+
+  scale_x_discrete(labels=c("Te no cadmium\nTu no cadmium","Te cadmium\nTu no cadmium","Te no cadmium\nTu cadmium","Te cadmium\nTu cadmium"))+
+  ylab("Distance to \n the T. urticae edge")+
+    scale_fill_brewer(palette = "Spectral", labels=c("Te no cadmium:Tu no cadmium", "Te cadmium:Tu no cadmium", "Te no cadmium:Tu cadmium", "Te cadmium:Tu cadmium"), name="")+
+  guides(fill=guide_legend(nrow=2))+
+  xlab("Te Selection Regime : Tu Selection Regime")+
+  theme(legend.position = "bottom", strip.background =element_rect(colour="white"), panel.border = element_rect(colour="black"), axis.text.x = element_text(size=12, angle = 45, vjust = 0.63), axis.title.x = element_text(hjust=10))
+
+plot_grid(ggplot_distTe + theme(legend.position="none"),ggplot_distTu + theme(legend.position="none"), ncol=2, labels=c("A", "B") )
+
+save_plot("./Plots/Fig3.pdf", width=25, height=15)
+save_plot("./Plots/Fig3.png", width=25, height=15)
+
+
+ggplot(struct_mat_w0, aes(x=interaction(Te_Regime, Tu_Regime), y=minDistance2, fill=interaction(Te_Regime, Tu_Regime)))+
+  facet_grid(.~Environment, labeller=labeller(Environment=Env))+
+    geom_hline(yintercept = 0, colour="lightgrey", linetype="dashed")+
+  geom_point(size=2, shape=24,position=position_dodge2(0.5), alpha=0.5)+
+  geom_point(data=struct_mat_REP,aes(x=interaction(Te_Regime, Tu_Regime), y=minDistance2, fill=interaction(Te_Regime, Tu_Regime)), colour="black", size=3, shape=21 )+
+  theme_bw()+
+  theme_ines+
+  scale_x_discrete(labels=c("Te no cadmium\nTu no cadmium","Te cadmium\nTu no cadmium","Te no cadmium\nTu cadmium","Te cadmium\nTu cadmium"))+
+ #scale_color_manual(values=c("darkred", "darkblue"), labels=c("Cadmium", "Water"))+
+  ylab("Distance to \n the closest edge")+
+    scale_fill_brewer(palette = "Spectral", labels=c("Te no cadmium:Tu no cadmium", "Te cadmium:Tu no cadmium", "Te no cadmium:Tu cadmium", "Te cadmium:Tu cadmium"), name="")+
+  xlab(expression(paste("Predicted offspring production for ", italic("T. urticae"))))+
+  guides(fill=guide_legend(nrow=2))+
+  xlab("Selection Regimes")+
+  theme(legend.position = "bottom", strip.background =element_rect(colour="white"), panel.border = element_rect(colour="black"), axis.text.x = element_text(size=12, angle = 45, vjust = 0.63))
+save_plot("./Plots/S9.pdf", width=20, height=15)
+save_plot("./Plots/S9.png", width=20, height=15)
+
+```
+
+
+##### Stats
+
+```{r}
+
+hist(struct_mat_w0$distanceTu)
+descdist(subset(struct_mat_w0, Environment=="Cd")$distanceTu , discrete = FALSE, boot = 500)
+descdist(subset(struct_mat_w0, Environment=="Cd")$distanceTe , discrete = FALSE, boot = 500)
+
+descdist(subset(struct_mat_w0, Environment=="N")$distanceTu , discrete = FALSE, boot = 500)
+descdist(subset(struct_mat_w0, Environment=="N")$distanceTe , discrete = FALSE, boot = 500)
+
+
+dist_Cd_Tu<-glmmTMB(distanceTu~Te_Regime*Tu_Regime, data=subset(struct_mat_w0, Environment=="Cd"), family=Gamma(link="log"))
+dist_Cd_Tu2<-glmmTMB(distanceTu~Te_Regime*Tu_Regime, data=subset(struct_mat_w0, Environment=="Cd"), family=Gamma(link="identity"))
+dist_Cd_Tu3<-glmmTMB(distanceTu~Te_Regime*Tu_Regime, data=subset(struct_mat_w0, Environment=="Cd"), family=gaussian(link="log"))
+#dist_Cd_Tu4<-glmmTMB(distanceTu~Te_Regime*Tu_Regime, data=subset(struct_mat_w0, Environment=="Cd"), family=beta_family(link="log"))
+
+dist_Cd_Te<-glmmTMB(distanceTe~Te_Regime*Tu_Regime, data=subset(struct_mat_w0, Environment=="Cd"), family=Gamma(link="log"))
+dist_Cd_Te2<-glmmTMB(distanceTe~Te_Regime*Tu_Regime, data=subset(struct_mat_w0, Environment=="Cd"), family=Gamma(link="identity"))
+dist_Cd_Te3<-glmmTMB(distanceTe~Te_Regime*Tu_Regime, data=subset(struct_mat_w0, Environment=="Cd"), family=gaussian(link="log"))
+#dist_Cd_Te4<-glmmTMB(distanceTe~Te_Regime*Tu_Regime, data=subset(struct_mat_w0, Environment=="Cd"), family=beta_family(link="logit"))
+
+
+anova(dist_Cd_Tu, dist_Cd_Tu2, dist_Cd_Tu3)
+anova(dist_Cd_Te, dist_Cd_Te2, dist_Cd_Te3)
+
+summary(dist_Cd_Tu)
+summary(dist_Cd_Te)
+
+dist_N<-glmmTMB(minDistance~Te_Regime*Tu_Regime, data=subset(struct_mat_w0, Environment=="N"), family=Gamma(link="log"))
+dist_Cd<-glmmTMB(minDistance~Te_Regime*Tu_Regime, data=subset(struct_mat_w0, Environment=="Cd"), family=Gamma(link="log"))
+summary(dist_Cd)
+
+summary(dist_Cd)
+summary(dist_N)
+
+
+dist_glm<-glmmTMB(minDistance~Te_Regime*Tu_Regime*Environment, data=struct_mat_w0, family=Gamma(link="log"))
+summary(dist_glm)
+
+dist_glm2<-glmmTMB(minDistance~Te_Regime+Tu_Regime+Environment, data=struct_mat_w0, family=Gamma(link="log"))
+dist_glm3<-glmmTMB(minDistance~Te_Regime*Environment+Tu_Regime*Environment, data=struct_mat_w0, family=Gamma(link="log"))
+summary(dist_glm3)
+Anova(dist_glm2)
+
+anova(dist_glm, dist_glm2, dist_glm3)
+
+dist_Cd_Te<-glmmTMB(distanceTe~Environment, data=struct_mat_w0, family=Gamma(link="log"))
+summary(dist_Cd_Te)
+
+dist_Cd_Tu<-glmmTMB(distanceTu~Environment, data=struct_mat_w0, family=Gamma(link="log"))
+summary(dist_Cd_Tu)
+
+
+dist_Cd<-glmmTMB(minDistance~Environment, data=struct_mat_w0, family=Gamma(link="log"))
+summary(dist_Cd)
+
+
+```
+
+# 4 - Can we predict the outcome of species interactions?
+
+```{r}
+str(sum_coex_g42_res2)
+
+coex_no_het<-subset(sum_coex_g42_res2, Env!="Heterogeneous")
+
+coex_no_het2<-coex_no_het %>%
+  group_by(SRTu, SRTe, Rep2, Box2, Env) %>%
+  summarize(sumTe=sum(av_Te, na.rm=TRUE), sumTu=sum(av_Tu, na.rm=TRUE)) %>% as.data.frame()
+
+coex_no_het2$Te_ratio<-coex_no_het2$sumTe/(coex_no_het2$sumTe+coex_no_het2$sumTu)
+
+coex_no_het2$Te_ratio[which(coex_no_het2$Te_ratio=="NaN")]<-0
+
+coex_no_het2$Tu_Regime<-mapvalues(coex_no_het2$SRTu, c("Tu2", "Tu1"), c("SR2", "SR1"))
+
+coex_no_het2$Te_Regime<-mapvalues(coex_no_het2$SRTe, c("Te4", "Te5"), c("SR4", "SR5"))
+
+
+str(coex_no_het2)
+
+```
+
+#### Predicting once
+
+```{r}
+param_all_REP
+
+pred_coex_RK_REP<-expand_grid(Te=c("SR4","SR5"), Tu=c("SR1", "SR2"), Environment= c("N", "Cd"))
+
+
+pred_coex_RK_REP$predTu1<-sapply(c(1:length(pred_coex_RK_REP$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+
+  bl<-aux_alphas$Tu_lambda[1]*6* exp(-aux_alphas$Tu_intra[1]*6 - aux_alphas$Tu_inter[1]*6)
+  
+  bl
+  })
+
+pred_coex_RK_REP$predTe1<-sapply(c(1:length(pred_coex_RK_REP$Te)), function(x){
+  aux_alphas<-subset(param_all_REP, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+
+  bl<-aux_alphas$Te_lambda[1]*6* exp(-aux_alphas$Te_intra[1]*6 - aux_alphas$Te_inter[1]*6)
+  
+  bl
+  })
+
+
+pred_coex_RK_REP$predTu2<-sapply(c(1:length(pred_coex_RK_REP$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+
+  bl<-aux_alphas$Tu_lambda[1]*pred_coex_RK_REP$predTu1[x]* exp(-aux_alphas$Tu_intra[1]*pred_coex_RK_REP$predTu1[x]- aux_alphas$Tu_inter[1]*pred_coex_RK_REP$predTe1[x])
+  
+  bl
+  })
+
+pred_coex_RK_REP$predTe2<-sapply(c(1:length(pred_coex_RK_REP$Te)), function(x){
+  aux_alphas<-subset(param_all_REP, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+
+  bl<-aux_alphas$Te_lambda[1]*pred_coex_RK_REP$predTe1[x]* exp(-aux_alphas$Te_intra[1]*pred_coex_RK_REP$predTe1[x] - aux_alphas$Te_inter[1]*pred_coex_RK_REP$predTu1[x])
+  
+  bl
+  })
+
+x<-1
+# lower - stronger alpha and lower lambda
+pred_coex_RK_REP$predTu1_L<-sapply(c(1:length(pred_coex_RK_REP$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+  aux_lambda<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+
+  bl<-aux_lambda$Tu_lambda[1]*6* exp(-aux_alphas$Tu_intra[1]*6- aux_alphas$Tu_inter[1]*6)
+  
+  bl
+  })
+
+pred_coex_RK_REP$predTe1_L<-sapply(c(1:length(pred_coex_RK_REP$Te)), function(x){
+  aux_alphas<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+  aux_lambda<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+
+  bl<-aux_lambda$Te_lambda[1]*6* exp(-aux_alphas$Te_intra[1]*6 - aux_alphas$Te_inter[1]*6)
+  
+  bl
+  })
+
+
+pred_coex_RK_REP$predTu2_L<-sapply(c(1:length(pred_coex_RK_REP$Tu)), function(x){
+    aux_alphas<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+  aux_lambda<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+
+  bl<-aux_lambda$Tu_lambda[1]*pred_coex_RK_REP$predTu1_L[x]* exp(-aux_alphas$Tu_intra[1]*pred_coex_RK_REP$predTu1_L[x]- aux_alphas$Tu_inter[1]*pred_coex_RK_REP$predTe1_L[x])
+  
+  bl
+  })
+
+pred_coex_RK_REP$predTe2_L<-sapply(c(1:length(pred_coex_RK_REP$Te)), function(x){
+    aux_alphas<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+  aux_lambda<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+
+  bl<-aux_lambda$Te_lambda[1]*pred_coex_RK_REP$predTe1_L[x]* exp(-aux_alphas$Te_intra[1]*pred_coex_RK_REP$predTe1_L[x] - aux_alphas$Te_inter[1]*pred_coex_RK_REP$predTu1_L[x])
+  
+  bl
+  })
+
+# upper
+pred_coex_RK_REP$predTu1_U<-sapply(c(1:length(pred_coex_RK_REP$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+  aux_lambda<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+
+  bl<-aux_lambda$Tu_lambda[1]*6* exp(-aux_alphas$Tu_intra[1]*6- aux_alphas$Tu_inter[1]*6)
+  
+  bl
+  })
+
+pred_coex_RK_REP$predTe1_U<-sapply(c(1:length(pred_coex_RK_REP$Te)), function(x){
+  aux_alphas<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+  aux_lambda<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+
+  bl<-aux_lambda$Te_lambda[1]*6* exp(-aux_alphas$Te_intra[1]*6 - aux_alphas$Te_inter[1]*6)
+  
+  bl
+  })
+
+
+pred_coex_RK_REP$predTu2_U<-sapply(c(1:length(pred_coex_RK_REP$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+  aux_lambda<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+
+  bl<-aux_lambda$Tu_lambda[1]* pred_coex_RK_REP$predTu1_U[x]* exp(-aux_alphas$Tu_intra[1]*pred_coex_RK_REP$predTu1_U[x]- aux_alphas$Tu_inter[1]*pred_coex_RK_REP$predTe1_U[x])
+  
+  bl
+  })
+
+pred_coex_RK_REP$predTe2_U<-sapply(c(1:length(pred_coex_RK_REP$Te)), function(x){
+ aux_alphas<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+  aux_lambda<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex_RK_REP$Tu[x]) & Te_Regime==as.character(pred_coex_RK_REP$Te[x]) & Environment==as.character(pred_coex_RK_REP$Environment[x]))
+
+  bl<-aux_lambda$Te_lambda[1]*pred_coex_RK_REP$predTe1_U[x]* exp(-aux_alphas$Te_intra[1]*pred_coex_RK_REP$predTe1_U[x] - aux_alphas$Te_inter[1]*pred_coex_RK_REP$predTu1_U[x])
+  
+  bl
+  })
+
+
+names(pred_coex_RK_REP)[1:3]<-c("SRTe", "SRTu", "Env")
+
+pred_coex_RK_REP<-as.data.frame(pred_coex_RK_REP)
+
+```
+
+
+## Predicting per replicate
+```{r}
+
+pred_coex_RK_w0<-as.data.frame(expand_grid(Te=c("SR4","SR5"), Tu=c("SR1", "SR2"), Environment= c("N", "Cd"), Replicate=c(1,2,3,4,5)))
+
+pred_coex_RK_w0<- pred_coex_RK_w0[- which(pred_coex_RK_w0$Replicate==2 & pred_coex_RK_w0$Tu=="SR2" & pred_coex_RK_w0$Environment=="Cd"),]
+
+
+pred_coex_RK_w0$predTu1<-sapply(c(1:length(pred_coex_RK_w0$Tu)), function(x){
+  aux_alphas<-subset(param_all_w0, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+
+  bl<-aux_alphas$Tu_lambda[1]*6* exp(-aux_alphas$Tu_intra[1]*6 - aux_alphas$Tu_inter[1]*6)
+  
+  bl
+  })
+
+pred_coex_RK_w0$predTe1<-sapply(c(1:length(pred_coex_RK_w0$Te)), function(x){
+  aux_alphas<-subset(param_all_w0, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+
+  bl<-aux_alphas$Te_lambda[1]*6* exp(-aux_alphas$Te_intra[1]*6 - aux_alphas$Te_inter[1]*6)
+  
+  bl
+  })
+
+
+pred_coex_RK_w0$predTu2<-sapply(c(1:length(pred_coex_RK_w0$Tu)), function(x){
+  aux_alphas<-subset(param_all_w0, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+
+  bl<-aux_alphas$Tu_lambda[1]*pred_coex_RK_w0$predTu1[x]* exp(-aux_alphas$Tu_intra[1]*pred_coex_RK_w0$predTu1[x]- aux_alphas$Tu_inter[1]*pred_coex_RK_w0$predTe1[x])
+  
+  bl
+  })
+
+pred_coex_RK_w0$predTe2<-sapply(c(1:length(pred_coex_RK_w0$Te)), function(x){
+  aux_alphas<-subset(param_all_w0, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+
+  bl<-aux_alphas$Te_lambda[1]*pred_coex_RK_w0$predTe1[x]* exp(-aux_alphas$Te_intra[1]*pred_coex_RK_w0$predTe1[x] - aux_alphas$Te_inter[1]*pred_coex_RK_w0$predTu1[x])
+  
+  bl
+  })
+
+x<-1
+# lower - stronger alpha and lower lambda
+pred_coex_RK_w0$predTu1_L<-sapply(c(1:length(pred_coex_RK_w0$Tu)), function(x){
+  aux_alphas<-subset(param_all_w0_upper, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+  aux_lambda<-subset(param_all_w0_lower, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+
+  bl<-aux_lambda$Tu_lambda[1]*6* exp(-aux_alphas$Tu_intra[1]*6- aux_alphas$Tu_inter[1]*6)
+  
+  bl
+  })
+
+pred_coex_RK_w0$predTe1_L<-sapply(c(1:length(pred_coex_RK_w0$Te)), function(x){
+  aux_alphas<-subset(param_all_w0_upper, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+  aux_lambda<-subset(param_all_w0_lower, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+
+  bl<-aux_lambda$Te_lambda[1]*6* exp(-aux_alphas$Te_intra[1]*6 - aux_alphas$Te_inter[1]*6)
+  
+  bl
+  })
+
+
+pred_coex_RK_w0$predTu2_L<-sapply(c(1:length(pred_coex_RK_w0$Tu)), function(x){
+    aux_alphas<-subset(param_all_w0_upper, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+  aux_lambda<-subset(param_all_w0_lower, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+
+  bl<-aux_lambda$Tu_lambda[1]*pred_coex_RK_w0$predTu1_L[x]* exp(-aux_alphas$Tu_intra[1]*pred_coex_RK_w0$predTu1_L[x]- aux_alphas$Tu_inter[1]*pred_coex_RK_w0$predTe1_L[x])
+  
+  bl
+  })
+
+pred_coex_RK_w0$predTe2_L<-sapply(c(1:length(pred_coex_RK_w0$Te)), function(x){
+    aux_alphas<-subset(param_all_w0_upper, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+  aux_lambda<-subset(param_all_w0_lower, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+
+  bl<-aux_lambda$Te_lambda[1]*pred_coex_RK_w0$predTe1_L[x]* exp(-aux_alphas$Te_intra[1]*pred_coex_RK_w0$predTe1_L[x] - aux_alphas$Te_inter[1]*pred_coex_RK_w0$predTu1_L[x])
+  
+  bl
+  })
+
+# upper
+pred_coex_RK_w0$predTu1_U<-sapply(c(1:length(pred_coex_RK_w0$Tu)), function(x){
+  aux_alphas<-subset(param_all_w0_lower, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+  aux_lambda<-subset(param_all_w0_upper, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+
+  bl<-aux_lambda$Tu_lambda[1]*6* exp(-aux_alphas$Tu_intra[1]*6- aux_alphas$Tu_inter[1]*6)
+  
+  bl
+  })
+
+pred_coex_RK_w0$predTe1_U<-sapply(c(1:length(pred_coex_RK_w0$Te)), function(x){
+  aux_alphas<-subset(param_all_w0_lower, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+  aux_lambda<-subset(param_all_w0_upper, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+
+  bl<-aux_lambda$Te_lambda[1]*6* exp(-aux_alphas$Te_intra[1]*6 - aux_alphas$Te_inter[1]*6)
+  
+  bl
+  })
+
+
+pred_coex_RK_w0$predTu2_U<-sapply(c(1:length(pred_coex_RK_w0$Tu)), function(x){
+  aux_alphas<-subset(param_all_w0_lower, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+  aux_lambda<-subset(param_all_w0_upper, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+
+  bl<-aux_lambda$Tu_lambda[1]* pred_coex_RK_w0$predTu1_U[x]* exp(-aux_alphas$Tu_intra[1]*pred_coex_RK_w0$predTu1_U[x]- aux_alphas$Tu_inter[1]*pred_coex_RK_w0$predTe1_U[x])
+  
+  bl
+  })
+
+pred_coex_RK_w0$predTe2_U<-sapply(c(1:length(pred_coex_RK_w0$Te)), function(x){
+ aux_alphas<-subset(param_all_w0_lower, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+  aux_lambda<-subset(param_all_w0_upper, Tu_Regime==as.character(pred_coex_RK_w0$Tu[x]) & Te_Regime==as.character(pred_coex_RK_w0$Te[x]) & Environment==as.character(pred_coex_RK_w0$Environment[x]) & Replicate==pred_coex_RK_w0$Replicate[x])
+
+  bl<-aux_lambda$Te_lambda[1]*pred_coex_RK_w0$predTe1_U[x]* exp(-aux_alphas$Te_intra[1]*pred_coex_RK_w0$predTe1_U[x] - aux_alphas$Te_inter[1]*pred_coex_RK_w0$predTu1_U[x])
+  
+  bl
+  })
+
+
+names(pred_coex_RK_w0)[1:3]<-c("SRTe", "SRTu", "Env")
+
+pred_coex_RK_w0<-as.data.frame(pred_coex_RK_w0)
+
+```
+
+#### Empirical
+
+```{r}
+coex_g42_rep
+
+coex_g42_rep$Te_ratio<-sapply(c(1:dim(coex_g42_rep)[1]), function(x) coex_g42_rep$sum_Te[x]/sum(coex_g42_rep$sum_Tu[x],coex_g42_rep$sum_Te[x]))
+
+#All the NAN were caused by division by 0, so we put it as 0
+coex_g42_rep$Te_ratio[which(coex_g42_rep$Te_ratio=="NaN")]<-0
+
+coex_g42_rep2<-coex_g42_rep %>%
+  group_by(SRTu, SRTe, Rep2, Box2, Env) %>%
+  summarize(sumTe=sum(sum_Te, na.rm=TRUE), sumTu=sum(sum_Tu, na.rm=TRUE))
+
+coex_g42_rep2$Te_ratio<-sapply(c(1:dim(coex_g42_rep2)[1]), function(x) coex_g42_rep2$sumTe[x]/sum(coex_g42_rep2$sumTu[x],coex_g42_rep2$sumTe[x]))
+
+coex_g42_rep3<-coex_g42_rep2 %>%
+  group_by(SRTu, SRTe, Rep2, Env) %>%
+  summarize(sum_Te=sum(sumTe, na.rm=TRUE), sum_Tu=sum(sumTu, na.rm=TRUE), sdTe=sd(sumTe, na.rm=TRUE), sdTu=sd(sumTu, na.rm=TRUE), meanTeRatio=mean(Te_ratio, na.rm=TRUE))
+
+coex_g42_rep3$Te_ratio<-sapply(c(1:dim(coex_g42_rep3)[1]), function(x) coex_g42_rep3$sum_Te[x]/sum(coex_g42_rep3$sum_Tu[x],coex_g42_rep3$sum_Te[x]))
+
+```
+
+
+### summarizing data
+
+```{r}
+
+str(coex_g42_rep3)
+
+coex_g42_rep3$Env<-plyr::mapvalues(coex_g42_rep3$Env, c("Cd","water"), c("Cd", "N"))
+coex_g42_rep3$SRTu2<-plyr::mapvalues(coex_g42_rep3$SRTu, c("Tu1","Tu2"), c("SR1", "SR2"))
+coex_g42_rep3$SRTe2<-plyr::mapvalues(coex_g42_rep3$SRTe, c("Te4","Te5"), c("SR4", "SR5"))
+
+sum_observed_coex<-coex_g42_rep3
+str(sum_observed_coex)
+
+write.csv(sum_observed_coex, "./Analyses/TableS3.csv")
+```
+
+### Comparing to data
+
+```{r}
+sum_observed_coex2<-sum_observed_coex %>%
+  group_by(SRTu2, SRTe2, Env)%>%
+  summarise(sumTe=sum(sum_Te, na.rm=TRUE),sumTu=mean(sum_Tu, na.rm=TRUE), sdTe2=sd(sum_Te, na.rm=TRUE)/sqrt(5), sdTu2=sd(sum_Tu, na.rm=TRUE)/sqrt(5), TeRatio=mean(meanTeRatio, na.rm=TRUE), sdTeRatio2=sd(meanTeRatio, na.rm=TRUE)/sqrt(5)) %>% as.data.frame()
+
+sum_observed_coex2$TeRatio_L<-sum_observed_coex2$TeRatio-sum_observed_coex2$sdTeRatio2
+sum_observed_coex2$TeRatio_U<-sum_observed_coex2$TeRatio+sum_observed_coex2$sdTeRatio2
+
+```
+
+
+
+## Testing predictions proportions
+
+```{r}
+str(pred_coex_RK_REP)
+
+pred_coex_RK_REP$TeRatio<-sapply(c(1:dim(pred_coex_RK_REP)[1]), function(x){
+  pred_coex_RK_REP$predTe2[x]/(pred_coex_RK_REP$predTe2[x]+pred_coex_RK_REP$predTu2[x])
+})
+
+pred_coex_RK_w0$TeRatio<-sapply(c(1:dim(pred_coex_RK_w0)[1]), function(x){
+  pred_coex_RK_w0$predTe2[x]/(pred_coex_RK_w0$predTe2[x]+pred_coex_RK_w0$predTu2[x])
+})
+
+pred_coex_RK_REP$TeRatio_L<-sapply(c(1:dim(pred_coex_RK_REP)[1]), function(x){
+  pred_coex_RK_REP$predTe2_L[x]/(pred_coex_RK_REP$predTe2_L[x]+pred_coex_RK_REP$predTu2_L[x])
+})
+
+pred_coex_RK_w0$TeRatio_L<-sapply(c(1:dim(pred_coex_RK_w0)[1]), function(x){
+  pred_coex_RK_w0$predTe2_L[x]/(pred_coex_RK_w0$predTe2_L[x]+pred_coex_RK_w0$predTu2_L[x])
+})
+
+pred_coex_RK_REP$TeRatio_U<-sapply(c(1:dim(pred_coex_RK_REP)[1]), function(x){
+  pred_coex_RK_REP$predTe2_U[x]/(pred_coex_RK_REP$predTe2_U[x]+pred_coex_RK_REP$predTu2_U[x])
+})
+
+pred_coex_RK_w0$TeRatio_U<-sapply(c(1:dim(pred_coex_RK_w0)[1]), function(x){
+  pred_coex_RK_w0$predTe2_U[x]/(pred_coex_RK_w0$predTe2_U[x]+pred_coex_RK_w0$predTu2_U[x])
+})
+
+
+str(pred_coex_RK_REP)
+
+sum_pred_coex_RK_REP<-pred_coex_RK_REP %>%
+  group_by(SRTu, SRTe, Env)%>%
+  summarise(predTe=mean(predTe2, na.rm=TRUE),predTu=mean(predTu2, na.rm=TRUE), sumTeRatio=(sum(predTe2, na.rm=TRUE)/(sum(predTe2, na.rm=TRUE)+sum(predTu2, na.rm=TRUE)))) %>% as.data.frame()
+
+```
+
+
+## Comparing to proportions
+
+```{r}
+str(sum_observed_coex)
+sum_observed_coex_rep2<-sum_observed_coex %>%
+  group_by(SRTe, SRTu, Env) %>%
+  summarize(obs_TeRatio=mean(meanTeRatio), SE_obs=sd(meanTeRatio)/sqrt(5), meanTe=mean(sum_Te, na.rm=TRUE), meanTu=mean(sum_Tu, na.rm=TRUE))
+
+colnames(sum_observed_coex_rep2)[1:2]<-c("SRTe", "SRTu")
+colnames(sum_observed_coex)[c(1,2,3,11:12)]<-c("SRTu2","SRTe2","Replicate","SRTu","SRTe")
+
+sum_observed_coex_rep<-inner_join(sum_observed_coex_rep2, pred_coex_RK_REP, by=c("SRTe", "SRTu", "Env"))
+
+sum_observed_coex_rep<-as.data.frame(sum_observed_coex_rep[,c("SRTe", "SRTu", "Env", "obs_TeRatio","SE_obs", "TeRatio", "TeRatio_L", "TeRatio_U", "meanTe","meanTu")])
+
+str(sum_observed_coex_rep)
+colnames(sum_observed_coex_rep)[6:8]<-c("pred_T1", "T1_L","T1_U")
+
+pred_coex_RK_w0$Replicate<-as.factor(pred_coex_RK_w0$Replicate)
+
+sum_observed_coex_ALL<-inner_join(sum_observed_coex, pred_coex_RK_w0, by=c("SRTe", "SRTu", "Env", "Replicate"))
+
+sum2_observed_coex_ALL<-as.data.frame(sum_observed_coex_ALL[,c(11,12,3,4,5,6,9,15,16)])
+
+str(sum2_observed_coex_ALL)
+
+sum2_observed_coex_ALL$predTeRatio<-sapply(c(1:dim(sum2_observed_coex_ALL)[1]), function(x){sum2_observed_coex_ALL$predTe2[x]/sum(sum2_observed_coex_ALL$predTe2[x],sum2_observed_coex_ALL$predTu2[x])})
+
+
+```
+
+
+#### Testing pooled replicates
+
+```{r}
+m3<- glm(cbind(meanTe, meanTu)~pred_T1, data=sum_observed_coex_rep, family="binomial")
+
+summary(m3)
+emtrends(m3, var="pred_T1", type="response")
+
+```
+
+#### Testing per replicate
+
+```{r}
+sum_observed_coex_ALL2<-sum2_observed_coex_ALL %>%
+  group_by(SRTe, SRTu, Env) %>%
+  summarize(meanRatio=mean(meanTeRatio, na.rm=TRUE), mean_pred=mean(predTeRatio, na.rm=TRUE), sdRatio=sd(meanTeRatio, na.rm=TRUE)/sqrt(5), sdPred=sd(predTeRatio, na.rm=TRUE)/sqrt(5), meanTe=mean(sum_Te, na.rm=TRUE), meanTu=mean(sum_Tu, na.rm=TRUE))
+
+ggplot(sum_observed_coex_ALL2, aes(x=meanRatio,y=mean_pred))+
+  geom_smooth(method="lm", colour="black", fullrange=TRUE)+
+    geom_errorbar(aes(ymin=mean_pred-sdPred, ymax=mean_pred+sdPred), width=0.03, colour="black")+
+    geom_errorbarh(aes(xmin=meanRatio-sdRatio, xmax=meanRatio+sdRatio), height=0.03, colour="black")+
+    geom_point(size=3, aes(fill=interaction(SRTu, SRTe), shape=Env))+
+   scale_fill_manual(values=c("#D7191C", "#FDAE61" ,"#ABDDA4", "#2B83BA"), labels=c("Te no cadmium:Tu no cadmium", "Te cadmium: Tu no cadmium", "Te no cadmium: Tu cadmium", "Te cadmium: Tu cadmium"))+
+  scale_shape_manual(values=c(22,23))+
+    theme_ines+
+  xlab("Observed ratio")+
+  ylab("Predicted ratio")+
+  theme(legend.position = "none")
+save_plot("./Plots/Fig4.pdf", width=10, height=10)
+
+
+m4<- glm(cbind(meanTe, meanTu)~mean_pred, data=sum_observed_coex_ALL2, family="binomial")
+
+summary(m4)
+emtrends(m4, var="mean_pred", type="response")
+
+write.csv(pred_coex_RK_w0, "./Analyses/PredictedPerReplicate.csv")
+write.csv(pred_coex_RK_REP, "./Analyses/PredictedPooledReplicate.csv")
+```
+
+
+# 5 -  Simulations for figure 1
+
+```{r}
+pred_coex1Gen<-as.data.frame(expand_grid(Te=c("SR4","SR5"), Tu=c("SR1", "SR2"), Environment= c("N", "Cd")))
+
+
+pred_coex1Gen$predTu_onlyLambda<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_alphas$Tu_lambda[1]*10
+  
+  bl
+  })
+
+pred_coex1Gen$predTu_Lambda_INTRA<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_alphas$Tu_lambda[1]*10*exp(-aux_alphas$Tu_intra[1]*10)
+  
+  bl
+  })
+
+pred_coex1Gen$predTu_ALL<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_alphas$Tu_lambda[1]*10*exp(-aux_alphas$Tu_intra[1]*10- aux_alphas$Tu_inter[1]*10)
+  
+  bl
+  })
+
+
+pred_coex1Gen$predTe_onlyLambda<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_alphas$Te_lambda[1]*10
+  
+  bl
+  })
+
+pred_coex1Gen$predTe_Lambda_INTRA<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_alphas$Te_lambda[1]*10*exp(-aux_alphas$Te_intra[1]*10)
+  
+  bl
+  })
+
+pred_coex1Gen$predTe_ALL<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_alphas$Te_lambda[1]*10*exp(-aux_alphas$Te_intra[1]*10- aux_alphas$Te_inter[1]*10)
+  
+  bl
+  })
+
+pred_coex1Gen$Control_lambdaTu<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Tu=="SR1")
+  
+  pred_coex1Gen$predTu_onlyLambda[x]/cont$predTu_onlyLambda[1]
+  
+})
+
+pred_coex1Gen$Control_lambdaTe<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Te=="SR4")
+  
+  pred_coex1Gen$predTe_onlyLambda[x]/cont$predTe_onlyLambda[1]
+  
+})
+
+pred_coex1Gen$Control_lambdaIntraTu<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Te=="SR4" & Tu=="SR1")
+  
+  pred_coex1Gen$predTu_Lambda_INTRA[x]/cont$predTu_Lambda_INTRA[1]
+  
+})
+
+pred_coex1Gen$Control_lambdaIntraTe<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Te=="SR4" & Tu=="SR1")
+  
+  pred_coex1Gen$predTe_Lambda_INTRA[x]/cont$predTe_Lambda_INTRA[1]
+  
+})
+
+pred_coex1Gen$Control_ALLTu<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Te=="SR4" & Tu=="SR1")
+  
+  pred_coex1Gen$predTu_ALL[x]/cont$predTu_ALL[1]
+  
+})
+
+pred_coex1Gen$Control_ALLTe<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Te=="SR4" & Tu=="SR1")
+  
+  pred_coex1Gen$predTe_ALL[x]/cont$predTe_ALL[1]
+  
+})
+```
+
+### Lower
+
+```{r}
+pred_coex1Gen$predTu_onlyLambda_L<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_alphas$Tu_lambda[1]*10
+  
+  bl
+  })
+
+pred_coex1Gen$predTu_Lambda_INTRA_L<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+  aux_lambdas<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_lambdas$Tu_lambda[1]*10*exp(-aux_alphas$Tu_intra[1]*10)
+  
+  bl
+  })
+
+pred_coex1Gen$predTu_ALL_L<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+  aux_lambdas<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_lambdas$Tu_lambda[1]*10*exp(-aux_alphas$Tu_intra[1]*10- aux_alphas$Tu_inter[1]*10)
+  
+  bl
+  })
+
+
+pred_coex1Gen$predTe_onlyLambda_L<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_alphas$Te_lambda[1]*10
+  
+  bl
+  })
+
+pred_coex1Gen$predTe_Lambda_INTRA_L<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+  aux_lambdas<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_lambdas$Te_lambda[1]*10*exp(-aux_alphas$Te_intra[1]*10)
+  
+  bl
+  })
+
+pred_coex1Gen$predTe_ALL_L<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+  aux_lambdas<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_lambdas$Te_lambda[1]*10*exp(-aux_alphas$Te_intra[1]*10- aux_alphas$Te_inter[1]*10)
+  
+  bl
+  })
+
+pred_coex1Gen$Control_lambdaTu_L<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Tu=="SR1")
+  
+  pred_coex1Gen$predTu_onlyLambda_L[x]/cont$predTu_onlyLambda_L[1]
+  
+})
+
+pred_coex1Gen$Control_lambdaTe_L<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Te=="SR4")
+  
+  pred_coex1Gen$predTe_onlyLambda_L[x]/cont$predTe_onlyLambda_L[1]
+  
+})
+
+pred_coex1Gen$Control_lambdaIntraTu_L<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Te=="SR4" & Tu=="SR1")
+  
+  pred_coex1Gen$predTu_Lambda_INTRA_L[x]/cont$predTu_Lambda_INTRA_L[1]
+  
+})
+
+pred_coex1Gen$Control_lambdaIntraTe_L<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Te=="SR4" & Tu=="SR1")
+  
+  pred_coex1Gen$predTe_Lambda_INTRA_L[x]/cont$predTe_Lambda_INTRA_L[1]
+  
+})
+
+pred_coex1Gen$Control_ALLTu_L<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Te=="SR4" & Tu=="SR1")
+  
+  pred_coex1Gen$predTu_ALL_L[x]/cont$predTu_ALL_L[1]
+  
+})
+
+pred_coex1Gen$Control_ALLTe_L<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Te=="SR4" & Tu=="SR1")
+  
+  pred_coex1Gen$predTe_ALL_L[x]/cont$predTe_ALL_L[1]
+  
+})
+
+```
+### Upper
+
+```{r}
+pred_coex1Gen$predTu_onlyLambda_U<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_alphas$Tu_lambda[1]*10
+  
+  bl
+  })
+
+pred_coex1Gen$predTu_lambda_INTRA_U<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+  aux_Lambdas<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_Lambdas$Tu_lambda[1]*10*exp(-aux_alphas$Tu_intra[1]*10)
+  
+  bl
+  })
+
+pred_coex1Gen$predTu_ALL_U<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+  aux_Lambdas<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_Lambdas$Tu_lambda[1]*10*exp(-aux_alphas$Tu_intra[1]*10- aux_alphas$Tu_inter[1]*10)
+  
+  bl
+  })
+
+
+pred_coex1Gen$predTe_onlyLambda_U<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_alphas$Te_lambda[1]*10
+  
+  bl
+  })
+
+pred_coex1Gen$predTe_lambda_INTRA_U<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+  aux_Lambdas<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_Lambdas$Te_lambda[1]*10*exp(-aux_alphas$Te_intra[1]*10)
+  
+  bl
+  })
+
+pred_coex1Gen$predTe_ALL_U<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
+  aux_alphas<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+  aux_Lambdas<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
+
+  bl<-aux_Lambdas$Te_lambda[1]*10*exp(-aux_alphas$Te_intra[1]*10- aux_alphas$Te_inter[1]*10)
+  
+  bl
+  })
+
+pred_coex1Gen$Control_LambdaTu_U<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Tu=="SR1")
+  
+  pred_coex1Gen$predTu_onlyLambda_U[x]/cont$predTu_onlyLambda_U[1]
+  
+})
+
+pred_coex1Gen$Control_LambdaTe_U<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Te=="SR4")
+  
+  pred_coex1Gen$predTe_onlyLambda_U[x]/cont$predTe_onlyLambda_U[1]
+  
+})
+
+pred_coex1Gen$Control_LambdaIntraTu_U<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Te=="SR4" & Tu=="SR1")
+  
+  pred_coex1Gen$predTu_lambda_INTRA_U[x]/cont$predTu_lambda_INTRA_U[1]
+  
+})
+
+pred_coex1Gen$Control_LambdaIntraTe_U<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Te=="SR4" & Tu=="SR1")
+  
+  pred_coex1Gen$predTe_lambda_INTRA_U[x]/cont$predTe_lambda_INTRA_U[1]
+  
+})
+
+pred_coex1Gen$Control_ALLTu_U<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Te=="SR4" & Tu=="SR1")
+  
+  pred_coex1Gen$predTu_ALL_U[x]/cont$predTu_ALL_U[1]
+  
+})
+
+pred_coex1Gen$Control_ALLTe_U<-sapply(c(1:dim(pred_coex1Gen)[1]), function(x){
+  cont<-subset(pred_coex1Gen, Environment==pred_coex1Gen$Environment[x] & Te=="SR4" & Tu=="SR1")
+  
+  pred_coex1Gen$predTe_ALL_U[x]/cont$predTe_ALL_U[1]
+  
+})
+
+pred_coex1Gen[,c("predTu_ALL", "predTu_ALL_U", "predTu_onlyLambda", "predTu_onlyLambda_U", "predTu_Lambda_INTRA", "predTu_lambda_INTRA_U")]
+```
+
+#### reshaping
+
+```{r}
+pred_coex1Gen_long<-gather(pred_coex1Gen[,c("Te","Tu","Environment","Control_lambdaTe" , "Control_lambdaTu","Control_lambdaIntraTe", "Control_lambdaIntraTu","Control_ALLTe" ,"Control_ALLTu",  "predTe_onlyLambda","predTe_Lambda_INTRA" ,"predTe_ALL" ,"predTu_onlyLambda","predTu_Lambda_INTRA","predTu_ALL" )], parameter, value, c("Control_lambdaTe" , "Control_lambdaTu","Control_lambdaIntraTe", "Control_lambdaIntraTu","Control_ALLTe" ,"Control_ALLTu",  "predTe_onlyLambda","predTe_Lambda_INTRA" ,"predTe_ALL" ,"predTu_onlyLambda","predTu_Lambda_INTRA","predTu_ALL" ))
+
+pred_coex1Gen_long_L<-gather(pred_coex1Gen[,c("Te","Tu","Environment","Control_lambdaTe_L" , "Control_lambdaTu_L","Control_lambdaIntraTe_L", "Control_lambdaIntraTu_L","Control_ALLTe_L" ,"Control_ALLTu_L",  "predTe_onlyLambda_L","predTe_Lambda_INTRA_L" ,"predTe_ALL_L" ,"predTu_onlyLambda_L","predTu_Lambda_INTRA_L","predTu_ALL_L" )], parameter, value_L, c("Control_lambdaTe_L" , "Control_lambdaTu_L","Control_lambdaIntraTe_L", "Control_lambdaIntraTu_L","Control_ALLTe_L" ,"Control_ALLTu_L",  "predTe_onlyLambda_L","predTe_Lambda_INTRA_L" ,"predTe_ALL_L" ,"predTu_onlyLambda_L","predTu_Lambda_INTRA_L","predTu_ALL_L"))
+
+pred_coex1Gen_long_L$parameter2<-mapvalues(pred_coex1Gen_long_L$parameter,c("Control_lambdaTe_L" , "Control_lambdaTu_L","Control_lambdaIntraTe_L", "Control_lambdaIntraTu_L","Control_ALLTe_L" ,"Control_ALLTu_L",  "predTe_onlyLambda_L","predTe_Lambda_INTRA_L" ,"predTe_ALL_L" ,"predTu_onlyLambda_L","predTu_Lambda_INTRA_L","predTu_ALL_L"), c("Control_lambdaTe" , "Control_lambdaTu","Control_lambdaIntraTe", "Control_lambdaIntraTu","Control_ALLTe" ,"Control_ALLTu",  "predTe_onlyLambda","predTe_Lambda_INTRA" ,"predTe_ALL" ,"predTu_onlyLambda","predTu_Lambda_INTRA","predTu_ALL") )
+
+
+pred_coex1Gen_long_U<-gather(pred_coex1Gen[,c("Te","Tu","Environment","Control_LambdaTe_U" , "Control_LambdaTu_U","Control_LambdaIntraTe_U", "Control_LambdaIntraTu_U","Control_ALLTe_U" ,"Control_ALLTu_U",  "predTe_onlyLambda_U","predTe_lambda_INTRA_U" ,"predTe_ALL_U" ,"predTu_onlyLambda_U","predTu_lambda_INTRA_U","predTu_ALL_U" )], parameter, value_U, c("Control_LambdaTe_U" , "Control_LambdaTu_U","Control_LambdaIntraTe_U", "Control_LambdaIntraTu_U","Control_ALLTe_U" ,"Control_ALLTu_U",  "predTe_onlyLambda_U","predTe_lambda_INTRA_U" ,"predTe_ALL_U" ,"predTu_onlyLambda_U","predTu_lambda_INTRA_U","predTu_ALL_U") )
+
+pred_coex1Gen_long_U$parameter2<-mapvalues(pred_coex1Gen_long_U$parameter,c("Control_LambdaTe_U" , "Control_LambdaTu_U","Control_LambdaIntraTe_U", "Control_LambdaIntraTu_U","Control_ALLTe_U" ,"Control_ALLTu_U",  "predTe_onlyLambda_U","predTe_lambda_INTRA_U" ,"predTe_ALL_U" ,"predTu_onlyLambda_U","predTu_lambda_INTRA_U","predTu_ALL_U"), c("Control_lambdaTe" , "Control_lambdaTu","Control_lambdaIntraTe", "Control_lambdaIntraTu","Control_ALLTe" ,"Control_ALLTu",  "predTe_onlyLambda","predTe_Lambda_INTRA" ,"predTe_ALL" ,"predTu_onlyLambda","predTu_Lambda_INTRA","predTu_ALL") )
+
+pred_coex1Gen_long$parameter2<-pred_coex1Gen_long$parameter
+
+pred_coex1Gen_long<-left_join(pred_coex1Gen_long, pred_coex1Gen_long_L, by=c("Te","Tu", "parameter2","Environment"))
+
+pred_coex1Gen_long<-left_join(pred_coex1Gen_long, pred_coex1Gen_long_U, by=c("Te","Tu", "parameter2","Environment"))
+
+colnames(pred_coex1Gen_long)<-c("Te", "Tu", "Environment", "parameter", "value", "parameter2","parameter_L", "value_L", "parameter_U", "value_U" )
+
+pred_coex1Gen_long$parameter3<-factor(pred_coex1Gen_long$parameter, c("Control_lambdaTe" , "Control_lambdaTu","Control_lambdaIntraTe", "Control_lambdaIntraTu","Control_ALLTe" ,"Control_ALLTu",  "predTe_onlyLambda","predTe_Lambda_INTRA" ,"predTe_ALL" ,"predTu_onlyLambda","predTu_Lambda_INTRA","predTu_ALL"))
+str(pred_coex1Gen)
+
+
+```
+
+### Figure1
+
+### Figures final Fig1
+
+```{r}
+
+ggplot(subset(pred_coex1Gen_long, parameter=="predTe_onlyLambda" |  parameter=="predTe_Lambda_INTRA" |  parameter=="predTe_ALL"), aes(y=parameter3, x=value))+
+    facet_grid(.~Environment, labeller=labeller(Environment=Env))+
+  geom_errorbarh(aes(xmin=value_L, xmax=value_U, group=interaction(Te, Tu)), colour="black", height=0.5, position=position_dodge2(0.5))+
+  geom_point(aes(fill=interaction(Te, Tu)),size=2.5, position=position_dodge2(0.5), stat="identity", shape=21)+
+  geom_vline(xintercept = 1, colour="lightgray", linetype="dashed")+
+  theme_bw()+
+    theme_ines+
+  scale_fill_brewer(palette = "Spectral", labels=c("Te no cadmium:Tu no cadmium", "Te cadmium:Tu no cadmium", "Te no cadmium:Tu cadmium", "Te cadmium:Tu cadmium"), name="")+
+  guides(fill=guide_legend(nrow=2))+
+  xlab(expression(paste("Predicted offspring production for ", italic("T. evansi"))))+
+  scale_y_discrete(labels=c(expression(lambda+ alpha[ii] + alpha [ij]),expression(lambda+ alpha[ii]), expression(lambda)), limits=rev(levels(droplevels(subset(pred_coex1Gen_long, parameter=="predTe_onlyLambda" |  parameter=="predTe_Lambda_INTRA" |  parameter=="predTe_ALL"))$parameter3)))+
+  theme(legend.position = "bottom", axis.text = element_text(size=12), axis.title = element_text(face="plain", size=12))+
+  ylab("")
+save_plot("./Plots/Fig1A.pdf", width=17.5, height=10)
+
+
+
+ggplot(subset(pred_coex1Gen_long, parameter=="predTu_onlyLambda" |  parameter=="predTu_Lambda_INTRA" |  parameter=="predTu_ALL"), aes(y=parameter3, x=value))+
+    facet_grid(.~Environment, labeller=labeller(Environment=Env))+
+  geom_errorbarh(aes(xmin=value_L, xmax=value_U, group=interaction(Te, Tu)), colour="black", height=0.5, position=position_dodge2(0.5))+
+  geom_point(aes(fill=interaction(Te, Tu)),size=2.5, position=position_dodge2(0.5), stat="identity", shape=21)+
+  geom_vline(xintercept = 1, colour="lightgray", linetype="dashed")+
+  theme_bw()+
+    theme_ines+
+  scale_fill_brewer(palette = "Spectral", labels=c("Te no cadmium:Tu no cadmium", "Te cadmium:Tu no cadmium", "Te no cadmium:Tu cadmium", "Te cadmium:Tu cadmium"), name="")+
+  xlab(expression(paste("Predicted offspring production for ", italic("T. urticae"))))+
+  guides(fill=guide_legend(nrow=2))+
+  scale_y_discrete(labels=c(expression(lambda+ alpha[ii] + alpha [ij]),expression(lambda+ alpha[ii]), expression(lambda)), limits=rev(levels(droplevels(subset(pred_coex1Gen_long, parameter=="predTu_onlyLambda" |  parameter=="predTu_Lambda_INTRA" |  parameter=="predTu_ALL"))$parameter3)))+
+  theme(legend.position = "bottom", axis.text = element_text(size=12), axis.title = element_text(face="plain", size=12))+
+  ylab("")
+save_plot("./Plots/Fig1B.pdf", width=17.5, height=10)
+
+```
+
