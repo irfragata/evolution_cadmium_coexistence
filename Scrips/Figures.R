@@ -648,60 +648,6 @@ CI_rep<-CI_rep[,-1]
 str(test_struct)
 str(CI_rep)
 
-ggplot(subset(test_struct, Environment=="N"), aes(x=Tu_lambda, y=Te_lambda, colour=interaction(Tu_Regime, Te_Regime)))+
-  facet_grid(Tu_Regime~ Te_Regime, labeller=labeller(Tu_Regime=regimeTu, Te_Regime=regimeTe) )+
-  #geom_polygon(data=subset(CI_rep,Environment=="N"),aes(x=x_upper, y=y_upper), fill="#fb6a4a", alpha=0.35, linewidth=0.85, colour=NA)+
-  #geom_polygon(data=subset(CI_rep,Environment=="N"),aes(x=x, y=y), fill="#969696", alpha=0.75, linewidth=0.85, colour="black")+
-  #geom_polygon(data=subset(CI_rep,Environment=="N"),aes(x=x_lower, y=y_lower), fill="lightskyblue1", alpha=0.9,  linewidth=0.85, colour=NA)+
-  geom_point(colour="black")+
-  geom_segment(data=subset(test_struct, Environment=="N" ), aes(xend=Tu_lambda, yend=Te_lambda,x=0, y=0),  arrow=arrow(length = unit(0.3, "cm")), colour="black", linewidth=1)+
-  geom_segment(data=subset(test_struct, Environment=="N" ), aes(xend=Tu_lambda_lower, yend=Te_lambda_lower,x=0, y=0),  colour="black", linetype="dashed", linewidth=0.75)+
-  geom_segment(data=subset(test_struct, Environment=="N" ), aes(xend=Tu_lambda_upper, yend=Te_lambda_upper,x=0, y=0), colour="black", linetype="dashed", linewidth=0.75)+
-  geom_abline(aes(slope=a22_a12, intercept=0), colour="black", linewidth=2)+
-  geom_abline(aes(slope=a21_a11, intercept=0), colour="darkgrey", linewidth=2)+
-  geom_abline(aes(slope=a22_a12_lower, intercept=0), colour="darkorange", linewidth=2)+
-  geom_abline(aes(slope=a21_a11_lower, intercept=0), colour="darkgreen", linewidth=2)+
-  geom_abline(aes(slope=a22_a12_upper, intercept=0), colour="darkorange", linewidth=2, linetype="dotted")+
-  geom_abline(aes(slope=a21_a11_upper, intercept=0), colour="darkgreen", linewidth=2, linetype="dotted")+
-  #geom_abline(intercept=0, slope=360, linewidth=2)+
-  theme_bw()+
-  theme_plots+
-  ylab(c("Intrinsic growth rate T. evansi"))+
-  xlab(c("Intrinsic growth rate T. urticae"))+
-  theme(legend.position = "none",plot.title = element_text(hjust = 0.5))+
-  ylim(c(-100,100))+
-  xlim(c(-100,100))+
-  coord_cartesian(xlim =c(0.1,2.8), ylim=c(0.1,6), expand = TRUE)+
-  ggtitle("No cadmium environment")
-
-
-ggplot(subset(test_struct, Environment=="Cd"), aes(x=Tu_lambda, y=Te_lambda, colour=interaction(Tu_Regime, Te_Regime)))+
-  facet_grid(Tu_Regime~ Te_Regime, labeller=labeller(Tu_Regime=regimeTu, Te_Regime=regimeTe) )+
-  #geom_polygon(data=subset(CI_rep,Environment=="Cd"),aes(x=x_upper, y=y_upper), fill="#fb6a4a", alpha=0.35, linewidth=0.85, colour=NA)+
-  #geom_polygon(data=subset(CI_rep,Environment=="Cd"),aes(x=x, y=y), fill="#969696", alpha=0.75, linewidth=0.85, colour="black")+
-  #geom_polygon(data=subset(CI_rep,Environment=="Cd"),aes(x=x_lower, y=y_lower), fill="lightskyblue1", alpha=0.9,  linewidth=0.85, colour=NA)+
-  geom_point(colour="black")+
-  geom_segment(data=subset(test_struct, Environment=="Cd" ), aes(xend=Tu_lambda, yend=Te_lambda,x=0, y=0),  arrow=arrow(length = unit(0.3, "cm")), colour="black", linewidth=1)+
-  geom_segment(data=subset(test_struct, Environment=="Cd" ), aes(xend=Tu_lambda_lower, yend=Te_lambda_lower,x=0, y=0),  colour="black", linetype="dashed", linewidth=0.75)+
-  geom_segment(data=subset(test_struct, Environment=="Cd" ), aes(xend=Tu_lambda_upper, yend=Te_lambda_upper,x=0, y=0), colour="black", linetype="dashed", linewidth=0.75)+
-  geom_abline(aes(slope=a22_a12, intercept=0), colour="black", linewidth=2)+
-  geom_abline(aes(slope=a21_a11, intercept=0), colour="darkgrey", linewidth=2)+
-  geom_abline(aes(slope=a22_a12_lower, intercept=0), colour="darkorange", linewidth=2)+
-  geom_abline(aes(slope=a21_a11_lower, intercept=0), colour="darkgreen", linewidth=2)+
-  geom_abline(aes(slope=a22_a12_upper, intercept=0), colour="darkorange", linewidth=2, linetype="dotted")+
-  geom_abline(aes(slope=a21_a11_upper, intercept=0), colour="darkgreen", linewidth=2, linetype="dotted")+
-  #geom_abline(intercept=0, slope=360, linewidth=2)+
-  theme_bw()+
-  theme_plots+
-  ylab(c("Intrinsic growth rate T. evansi"))+
-  xlab(c("Intrinsic growth rate T. urticae"))+
-  theme(legend.position = "none",plot.title = element_text(hjust = 0.5))+
-  ylim(c(-100,100))+
-  xlim(c(-100,100))+
-  coord_cartesian(xlim =c(0.1,2.8), ylim=c(0.1,6), expand = TRUE)+
-  ggtitle("Cadmium environment")
-
-
 ##### Final figure
 
 normal_feas<-ggplot(subset(test_struct, Environment=="N"), aes(x=Tu_lambda, y=Te_lambda, colour=interaction(Tu_Regime, Te_Regime)))+
