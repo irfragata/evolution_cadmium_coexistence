@@ -33,7 +33,7 @@ save_plot<-function(dir, width=15, height=10, ...){
 Env<-c("Water", "Cadmium")
 names(Env)<-c("N", "Cd")
 
-
+## Warning! This code takes a very long time to run!
 # 1 - Importing data and checking it
 
 coex<-read.csv("./Data/Coexistence_Cd_G42_submit.csv", header=TRUE) # Data from the coexistence experiment
