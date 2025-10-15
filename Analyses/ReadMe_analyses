@@ -1,0 +1,28 @@
+Analyses folder
+
+This folder has a series of intermediate files that are needed to run the code or that are produced as intermediate steps to then do figures.
+
+Bootstrap_stats_tests_10000.RData - workspace data saved from running the bootstrap for the statistical tests. This data is used in the Main_analyses script.
+
+min_distance_per_replicate.csv - intermediate file produce when estimating the minimal distances to the edges for each replicate. This data file is needed to do figures 3 and S9.
+
+min_distance_pooled.csv	- intermediate file produce when estimating the minimal distances to the edges for the pooled data. This data file is needed to do figures 3 and S9.
+
+MethodComparison - within this folder is stored the data from running the method comparison. This is to ensure that the script Method_Comparison.R is able to run.
+
+structural_REP_new.csv - intermediate file produced when estimating the structural niche and fitness differences for the different selection regimes, using pooled data. This file is used for figure 2.
+
+structural_REP_w0_new.csv - intermediate file produced when estimating the structural niche and fitness differences for the different selection regimes, using data for each replicate.
+
+cxr_normal_REP_allEqual	- folder containing the parameter estimates produced when running the cxr for the pooled data. This data are needed to run the main analyses and for figures 1, S3 to S8.
+
+cxr_normal_allEqual - folder containing the parameter estimates produced when running the cxr for each replicate. This data are needed to run the main analyses and for figures S3 to S8.
+
+popDyn_pooledData.csv - intermediate file produced when running the predicting section of the main analyses. This corresponds to a data frame with the predicted and observed data from the population dynamics experiment, for the pooled data. This file is needed for figure 4.
+
+popDyn_replicates.csv - intermediate file produced when running the predicting section of the main analyses. This corresponds to a data frame with the predicted and observed data from the population dynamics experiment, for the replicate data. This file is needed for figure 4.
+
+Parameter_exploration.RData - intermediate file with the information about the likelihood and estimates when starting the cxr from different initial conditions.
+
+
+
