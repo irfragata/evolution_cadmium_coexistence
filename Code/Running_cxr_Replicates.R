@@ -186,7 +186,7 @@ bootN<-2000
 eval<- TRUE
 
 # Creating directory to store the results
-dir.create("./Analyses/cxr_normal_allEqual", showWarnings = FALSE)
+dir.create("../Analyses/cxr_normal_allEqual", showWarnings = FALSE)
 
 #' 
 #' ## Set up data
@@ -437,7 +437,7 @@ obs.R1_w0<-cxr_pm_multifit(data = R1,
                               bootstrap_samples = bootN)
 
 # save observation
-save(obs.R1_w0,file= "./Analyses_restart/cxr_normal_allEqual/cxr_R1_N.RData")
+save(obs.R1_w0,file= "../Analyses_restart/cxr_normal_allEqual/cxr_R1_N.RData")
 
 obs.R3_w0<-cxr_pm_multifit(data = R3,
                              focal_column = my.reg,
@@ -454,7 +454,7 @@ obs.R3_w0<-cxr_pm_multifit(data = R3,
                              # no standard errors
                               bootstrap_samples = bootN)
 
-save(obs.R3_w0,file= "./Analyses_restart/cxr_normal_allEqual/cxr_R3_N.RData")
+save(obs.R3_w0,file= "../Analyses_restart/cxr_normal_allEqual/cxr_R3_N.RData")
 
 obs.R4_w0<-cxr_pm_multifit(data = R4,
                              focal_column = my.reg,
@@ -471,7 +471,7 @@ obs.R4_w0<-cxr_pm_multifit(data = R4,
                              # no standard errors
                               bootstrap_samples = bootN)
 
-save(obs.R4_w0,file= "./Analyses_restart/cxr_normal_allEqual/cxr_R4_N.RData")
+save(obs.R4_w0,file= "../Analyses_restart/cxr_normal_allEqual/cxr_R4_N.RData")
 
 obs.R5_w0<-cxr_pm_multifit(data = R5,
                              focal_column = my.reg,
@@ -487,7 +487,7 @@ obs.R5_w0<-cxr_pm_multifit(data = R5,
                              fixed_terms = NULL,
                              # no standard errors
                               bootstrap_samples = bootN)
-save(obs.R5_w0,file= "./Analyses_restart/cxr_normal_allEqual/cxr_R5_N.RData")
+save(obs.R5_w0,file= "../Analyses_restart/cxr_normal_allEqual/cxr_R5_N.RData")
 
 # Because there is no SR2 for replicate 2 we need to estimate SR1 and SR4 and SR5 in a different way
 
@@ -560,11 +560,11 @@ obs.R2_w0_sr1<-cxr_pm_fit(data = R2[[1]],
                                   # no standard errors
                                    bootstrap_samples = bootN)
 
-save(obs.R2_w0_sr1, file="./Analyses_restart/cxr_normal_allEqual/cxr_R2_SR1_N.RData")
-save(obs.R2_w0_sr4,file= "./Analyses_restart/cxr_normal_allEqual/cxr_R2_SR4_N.RData")
-save(obs.R2_w0_sr5, file="./Analyses_restart/cxr_normal_allEqual/cxr_R2_SR5_N.RData")
-save(obs.R2_w0_sr4_inter, file="./Analyses_restart/cxr_normal_allEqual/cxr_R2_SR4_inter_N.RData")
-save(obs.R2_w0_sr5_inter, file="./Analyses_restart/cxr_normal_allEqual/cxr_R2_SR5_inter_N.RData")
+save(obs.R2_w0_sr1, file="../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR1_N.RData")
+save(obs.R2_w0_sr4,file= "../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR4_N.RData")
+save(obs.R2_w0_sr5, file="../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR5_N.RData")
+save(obs.R2_w0_sr4_inter, file="../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR4_inter_N.RData")
+save(obs.R2_w0_sr5_inter, file="../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR5_inter_N.RData")
 
 
 #' 
@@ -766,9 +766,9 @@ cxr_param_w0<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), 
 #' ## Saving pooled parameter estimates 
 #' intermediate files in case something goes wrong
 ## ---------------------------
-write.csv(cxr_param_w0, "./Analyses/cxr_normal_allEqual/parameters_cxr_normal_N.csv")
-  write.csv(cxr_param_w0_upper, "./Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper_N.csv")
-  write.csv(cxr_param_w0_lower, "./Analyses/cxr_normal_allEqual/parameters_cxr_normal_lower_N.csv")
+write.csv(cxr_param_w0, "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_N.csv")
+  write.csv(cxr_param_w0_upper, "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper_N.csv")
+  write.csv(cxr_param_w0_lower, "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_lower_N.csv")
 
 
 #' 
@@ -1111,22 +1111,22 @@ obs.R2_Cd_w0_sr1<-cxr_pm_fit(data = Rep_R2_Cd[[1]],
 #' intermediate files in case something goes wrong
 ## ---------------------------
 ## Save the objects
-save(obs.R1_Cd_w0,file= "./Analyses_restart/cxr_normal_allEqual/cxr_R1_Cd.RData")
-save(obs.R3_Cd_w0, file="./Analyses_restart/cxr_normal_allEqual/cxr_R3_Cd.RData")
-save(obs.R4_Cd_w0, file="./Analyses_restart/cxr_normal_allEqual/cxr_R4_Cd.RData")
-save(obs.R5_Cd_w0, file="./Analyses_restart/cxr_normal_allEqual/cxr_R5_Cd.RData")
-save(obs.R2_Cd_w0_sr1, file="./Analyses_restart/cxr_normal_allEqual/cxr_R2_SR1_Cd.RData")
-save(obs.R2_Cd_w0_sr4,file= "./Analyses_restart/cxr_normal_allEqual/cxr_R2_SR4_Cd.RData")
-save(obs.R2_Cd_w0_sr5, file="./Analyses_restart/cxr_normal_allEqual/cxr_R2_SR5_Cd.RData")
-save(obs.R2_Cd_w0_sr4_inter, file="./Analyses_restart/cxr_normal_allEqual/cxr_R2_SR4_inter_Cd.RData")
-save(obs.R2_Cd_w0_sr5_inter, file="./Analyses_restart/cxr_normal_allEqual/cxr_R2_SR5_inter_Cd.RData")
+save(obs.R1_Cd_w0,file= "../Analyses_restart/cxr_normal_allEqual/cxr_R1_Cd.RData")
+save(obs.R3_Cd_w0, file="../Analyses_restart/cxr_normal_allEqual/cxr_R3_Cd.RData")
+save(obs.R4_Cd_w0, file="../Analyses_restart/cxr_normal_allEqual/cxr_R4_Cd.RData")
+save(obs.R5_Cd_w0, file="../Analyses_restart/cxr_normal_allEqual/cxr_R5_Cd.RData")
+save(obs.R2_Cd_w0_sr1, file="../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR1_Cd.RData")
+save(obs.R2_Cd_w0_sr4,file= "../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR4_Cd.RData")
+save(obs.R2_Cd_w0_sr5, file="../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR5_Cd.RData")
+save(obs.R2_Cd_w0_sr4_inter, file="../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR4_inter_Cd.RData")
+save(obs.R2_Cd_w0_sr5_inter, file="../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR5_inter_Cd.RData")
 
 #' 
 #' 
 ## ---------------------------
-write.csv(cxr_param_w0C, file = "./Analyses/cxr_normal_allEqual/parameters_cxr_normal_Cd.csv")
-  write.csv(cxr_param_w0C_upper, file = "./Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper_Cd.csv")
-  write.csv(cxr_param_w0C_lower, file = "./Analyses/cxr_normal_allEqual/parameters_cxr_normal_lower_Cd.csv")
+write.csv(cxr_param_w0C, file = "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_Cd.csv")
+  write.csv(cxr_param_w0C_upper, file = "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper_Cd.csv")
+  write.csv(cxr_param_w0C_lower, file = "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_lower_Cd.csv")
 
 
 #' 
@@ -1138,8 +1138,8 @@ param_all_w0<-as.data.frame(rbind(cxr_param_w0, cxr_param_w0C))
 param_all_w0_lower<-as.data.frame(rbind(cxr_param_w0_lower, cxr_param_w0C_lower))
 param_all_w0_upper<-as.data.frame(rbind(cxr_param_w0_upper, cxr_param_w0C_upper))
   
-  write.csv(param_all_w0, "./Analyses/cxr_normal_allEqual/parameters_cxr_normal.csv")
-  write.csv(param_all_w0_upper, "./Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper.csv")
-  write.csv(param_all_w0_lower, "./Analyses_restart/cxr_normal_allEqual/parameters_cxr_normal_lower.csv")
+  write.csv(param_all_w0, "../Analyses/cxr_normal_allEqual/parameters_cxr_normal.csv")
+  write.csv(param_all_w0_upper, "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper.csv")
+  write.csv(param_all_w0_lower, "../Analyses_restart/cxr_normal_allEqual/parameters_cxr_normal_lower.csv")
 
 #' 

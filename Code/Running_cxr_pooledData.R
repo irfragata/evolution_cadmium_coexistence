@@ -193,7 +193,7 @@ ca$GrowthRateOA<-sapply(c(1:length(ca[,1])), function(x){
 set.seed(1809)
 bootN<-5000
 eval<- TRUE
-dir.create("./Analyses/cxr_normal_REP_best", showWarnings = FALSE)
+dir.create("../Analyses/cxr_normal_REP_best", showWarnings = FALSE)
 
 
 #' 
@@ -593,15 +593,15 @@ cxr_param_REP_C_upper<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4",
 #' 
 ## ---------------------------
 ## Save the objects
-save(obs.w0, file="./Analyses/cxr_N_allEqual_best.RData")
-save(obs.Cd_w0, file="./Analyses/cxr_Cd_allEqual_best.RData")
+save(obs.w0, file="../Analyses/cxr_N_allEqual_best.RData")
+save(obs.Cd_w0, file="../Analyses/cxr_Cd_allEqual_best.RData")
 
 #' 
 #' Save the data sets to be used later
 ## ---------------------------
-write.csv(param_all_REP, "./Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_best.csv")
-  write.csv(param_all_REP_upper, "./Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_upper_best.csv")
-  write.csv(param_all_REP_lower, "./Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_lower_best.csv")
+write.csv(param_all_REP, "../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_best.csv")
+  write.csv(param_all_REP_upper, "../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_upper_best.csv")
+  write.csv(param_all_REP_lower, "../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_lower_best.csv")
 
 
 #' 

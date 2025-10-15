@@ -45,7 +45,7 @@ names(regimeTe)<-c("SR4", "SR5")
 
 colors_comb<-brewer.pal(name = "Spectral", 4)
 
-dir.create("./Plots")
+dir.create("../Plots")
 
 #' 
 #' # Figures
@@ -59,9 +59,9 @@ dir.create("./Plots")
 #' ### Importing data
 #' Importing the data to get the parameter estimates for pooled data
 ## ---------------------------
-param_all_REP<-read.csv("./Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_best.csv")
-param_all_REP_upper<-read.csv("./Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_upper_best.csv")
-param_all_REP_lower<-read.csv( "./Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_lower_best.csv")
+param_all_REP<-read.csv("../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_best.csv")
+param_all_REP_upper<-read.csv("../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_upper_best.csv")
+param_all_REP_lower<-read.csv( "../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_lower_best.csv")
 param_all_REP<-param_all_REP[,-1]
 param_all_REP_upper<-param_all_REP_upper[,-1]
 param_all_REP_lower<-param_all_REP_lower[,-1]
@@ -69,9 +69,9 @@ param_all_REP_lower<-param_all_REP_lower[,-1]
 #' 
 #' Importing the data to get the parameter estimates for each replicate
 ## ---------------------------
-param_all_w0<-read.csv("./Analyses/cxr_normal_allEqual/parameters_cxr_normal_new.csv")
-param_all_w0_upper<-read.csv("./Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper_new.csv")
-param_all_w0_lower<-read.csv( "./Analyses/cxr_normal_allEqual/parameters_cxr_normal_lower_new.csv")
+param_all_w0<-read.csv("../Analyses/cxr_normal_allEqual/parameters_cxr_normal_new.csv")
+param_all_w0_upper<-read.csv("../Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper_new.csv")
+param_all_w0_lower<-read.csv( "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_lower_new.csv")
 
 param_all_w0<-param_all_w0[,-1]
 param_all_w0_upper<-param_all_w0_upper[,-1]
@@ -322,7 +322,7 @@ ggplot(subset(pred_coex1Gen_long, parameter=="predTe_onlyLambda" |  parameter=="
   scale_y_discrete(labels=c(expression(lambda+ alpha[ii] + alpha [ij]),expression(lambda+ alpha[ii]), expression(lambda)), limits=rev(levels(droplevels(subset(pred_coex1Gen_long, parameter=="predTe_onlyLambda" |  parameter=="predTe_Lambda_INTRA" |  parameter=="predTe_ALL"))$parameter3)))+
   theme(legend.position = "bottom", axis.text = element_text(size=12), axis.title = element_text(face="plain", size=12))+
   ylab("")
- save_plot("./Plots/Fig1A.pdf", width=17.5, height=10)
+ save_plot("../Plots/Fig1A.pdf", width=17.5, height=10)
 
 #' 
 #' 
@@ -341,7 +341,7 @@ ggplot(subset(pred_coex1Gen_long, parameter=="predTu_onlyLambda" |  parameter=="
   scale_y_discrete(labels=c(expression(lambda+ alpha[ii] + alpha [ij]),expression(lambda+ alpha[ii]), expression(lambda)), limits=rev(levels(droplevels(subset(pred_coex1Gen_long, parameter=="predTu_onlyLambda" |  parameter=="predTu_Lambda_INTRA" |  parameter=="predTu_ALL"))$parameter3)))+
   theme(legend.position = "bottom", axis.text = element_text(size=12), axis.title = element_text(face="plain", size=12))+
   ylab("")
-save_plot("./Plots/Fig1B.pdf", width=17.5, height=10)
+save_plot("../Plots/Fig1B.pdf", width=17.5, height=10)
 
 
 #' # Figure 2
@@ -350,7 +350,7 @@ save_plot("./Plots/Fig1B.pdf", width=17.5, height=10)
 #' 
 ## ---------------------------
 # Importing parameters
-test_struct<-read.csv("./Analyses/structural_REP_new.csv")
+test_struct<-read.csv("../Analyses/structural_REP_new.csv")
 # removing the first column
 test_struct<-test_struct[,-1]
 
@@ -435,7 +435,7 @@ normal_feas<-ggplot(subset(test_struct, Environment=="N"), aes(x=Tu_lambda, y=Te
   coord_cartesian(xlim =c(0.01,4), ylim=c(0.01,8), expand = TRUE)+
   ggtitle("No cadmium environment")
 normal_feas
-save_plot("./Plots/Fig2B_B.pdf", width=20, height=15)
+save_plot("../Plots/Fig2B_B.pdf", width=20, height=15)
 
 #' 
 #' #### cadmium
@@ -460,7 +460,7 @@ cadmium_feas<-ggplot(subset(test_struct, Environment=="Cd"), aes(x=Tu_lambda, y=
   ggtitle("Cadmium environment")
 
 cadmium_feas
-save_plot("./Plots/Fig2A_B.pdf", width=20, height=15)
+save_plot("../Plots/Fig2A_B.pdf", width=20, height=15)
 
 #' 
 #' #### both together
@@ -468,8 +468,8 @@ save_plot("./Plots/Fig2A_B.pdf", width=20, height=15)
 # joining the two plots
 plot_grid(cadmium_feas, normal_feas, ncol=2, labels=c("A", "B") )
 # save plots
-save_plot("./Plots/Fig2.pdf", width=30, height=15)
-save_plot("./Plots/Fig2.tiff", width=30, height=15)
+save_plot("../Plots/Fig2.pdf", width=30, height=15)
+save_plot("../Plots/Fig2.tiff", width=30, height=15)
 
 #' 
 #' # Figure 3
@@ -477,8 +477,8 @@ save_plot("./Plots/Fig2.tiff", width=30, height=15)
 #' ### Importing parameters
 #' 
 ## ---------------------------
-struct_mat_REP_final2<-read.csv("./Analyses/min_distance_pooled.csv", header=TRUE)
-struct_mat_w0_final<-read.csv("./Analyses/min_distance_per_replicate.csv", header=TRUE)
+struct_mat_REP_final2<-read.csv("../Analyses/min_distance_pooled.csv", header=TRUE)
+struct_mat_w0_final<-read.csv("../Analyses/min_distance_per_replicate.csv", header=TRUE)
 
 
 #' 
@@ -500,8 +500,8 @@ ggplot(struct_mat_w0_final, aes(x=interaction(Te_Regime, Tu_Regime), y=minDistan
   guides(fill=guide_legend(nrow=2))+
   xlab("Selection Regimes")+
   theme(legend.position = "bottom", strip.background =element_rect(colour="white"), panel.border = element_rect(colour="black"), axis.text.x = element_text(size=10, angle = 45, vjust = 0.63), axis.title = element_text(size=10, face="bold"), strip.text = element_text(size=10), axis.text.y = element_text(size=10))
-save_plot("./Plots/Fig3.pdf", width=15, height=10)
-save_plot("./Plots/Fig3.png", width=15, height=10)
+save_plot("../Plots/Fig3.pdf", width=15, height=10)
+save_plot("../Plots/Fig3.png", width=15, height=10)
 
 #' 
 #' # Figure 4
@@ -509,9 +509,9 @@ save_plot("./Plots/Fig3.png", width=15, height=10)
 #' ### Importing data
 #' 
 ## ---------------------------
-sum_observed_coex_rep<-read.csv(file="./Analyses/popDyn_pooledData.csv", header=TRUE)
+sum_observed_coex_rep<-read.csv(file="../Analyses/popDyn_pooledData.csv", header=TRUE)
 
-sum_observed_coex_ALL2<-read.csv(file="./Analyses/popDyn_replicates.csv", header=TRUE)
+sum_observed_coex_ALL2<-read.csv(file="../Analyses/popDyn_replicates.csv", header=TRUE)
 
 #' 
 #' ### slopes and figure
@@ -546,9 +546,9 @@ ggplot(sum_observed_coex_ALL2)+
   theme(legend.position = "none")+
   coord_cartesian(xlim=c(0.3,0.96), ylim=c(0.3, 0.96))
 
-save_plot("./Plots/Fig4.pdf", width=10, height=10)
+save_plot("../Plots/Fig4.pdf", width=10, height=10)
 
-save_plot("./Plots/Fig4.png", width=15, height=12)
+save_plot("../Plots/Fig4.png", width=15, height=12)
 
 
 #' 
@@ -559,9 +559,9 @@ save_plot("./Plots/Fig4.png", width=15, height=12)
 #' ### Importing data
 #' Importing the data to get the parameter estimates for pooled data
 ## ---------------------------
-param_all_REP<-read.csv("./Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_best.csv")
-param_all_REP_upper<-read.csv("./Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_upper_best.csv")
-param_all_REP_lower<-read.csv( "./Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_lower_best.csv")
+param_all_REP<-read.csv("../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_best.csv")
+param_all_REP_upper<-read.csv("../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_upper_best.csv")
+param_all_REP_lower<-read.csv( "../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_lower_best.csv")
 param_all_REP<-param_all_REP[,-1]
 param_all_REP_upper<-param_all_REP_upper[,-1]
 param_all_REP_lower<-param_all_REP_lower[,-1]
@@ -569,9 +569,9 @@ param_all_REP_lower<-param_all_REP_lower[,-1]
 #' 
 #' Importing the data to get the parameter estimates for each replicate
 ## ---------------------------
-param_all_w0<-read.csv("./Analyses/cxr_normal_allEqual/parameters_cxr_normal_new.csv")
-param_all_w0_upper<-read.csv("./Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper_new.csv")
-param_all_w0_lower<-read.csv( "./Analyses/cxr_normal_allEqual/parameters_cxr_normal_lower_new.csv")
+param_all_w0<-read.csv("../Analyses/cxr_normal_allEqual/parameters_cxr_normal_new.csv")
+param_all_w0_upper<-read.csv("../Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper_new.csv")
+param_all_w0_lower<-read.csv( "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_lower_new.csv")
 
 param_all_w0<-param_all_w0[,-1]
 param_all_w0_upper<-param_all_w0_upper[,-1]
@@ -731,18 +731,18 @@ Te_inter_ev<-ggplot(data=subset(param_all_REP_long, (parameter=="Te_inter" & Env
 ## ---------------------------
 plot_grid(Te_gr_ev, Tu_gr_ev, labels=c("A", "B"))
 
-save_plot("./Plots/FigS7.pdf", width=30, height=15)
-save_plot("./Plots/FigS7.png", width=30, height=15)
+save_plot("../Plots/FigS7.pdf", width=30, height=15)
+save_plot("../Plots/FigS7.png", width=30, height=15)
 
 plot_grid(Te_intra_ev, Tu_intra_ev, labels=c("A", "B"))
 
-save_plot("./Plots/FigS3.pdf", width=30, height=15)
-save_plot("./Plots/FigS3.png", width=30, height=15)
+save_plot("../Plots/FigS3.pdf", width=30, height=15)
+save_plot("../Plots/FigS3.png", width=30, height=15)
 
 plot_grid(Te_inter_ev, Tu_inter_ev, labels=c("A", "B"))
 
-save_plot("./Plots/FigS4.pdf", width=30, height=15)
-save_plot("./Plots/FigS4.png", width=30, height=15)
+save_plot("../Plots/FigS4.pdf", width=30, height=15)
+save_plot("../Plots/FigS4.png", width=30, height=15)
 
 #' 
 #' ## Ancestral env
@@ -849,18 +849,18 @@ Te_inter_ev_N<-ggplot(data=subset(param_all_REP_long, (parameter=="Te_inter" & E
 ## ---------------------------
 plot_grid(Te_gr_ev_N, Tu_gr_ev_N, labels=c("A", "B"))
 
-save_plot("./Plots/FigS8.pdf", width=30, height=15)
-save_plot("./Plots/FigS8.png", width=30, height=15)
+save_plot("../Plots/FigS8.pdf", width=30, height=15)
+save_plot("../Plots/FigS8.png", width=30, height=15)
 
 plot_grid(Te_intra_ev_N, Tu_intra_ev_N, labels=c("A", "B"))
 
-save_plot("./Plots/FigS5.pdf", width=30, height=15)
-save_plot("./Plots/FigS5.png", width=30, height=15)
+save_plot("../Plots/FigS5.pdf", width=30, height=15)
+save_plot("../Plots/FigS5.png", width=30, height=15)
 
 plot_grid(Te_inter_ev_N, Tu_inter_ev_N, labels=c("A", "B"))
 
-save_plot("./Plots/FigS6.pdf", width=30, height=15)
-save_plot("./Plots/FigS6.png", width=30, height=15)
+save_plot("../Plots/FigS6.pdf", width=30, height=15)
+save_plot("../Plots/FigS6.png", width=30, height=15)
 
 #' 
 #' ### Figure S9
@@ -868,8 +868,8 @@ save_plot("./Plots/FigS6.png", width=30, height=15)
 #' ### Importing parameters
 #' 
 ## ---------------------------
-struct_mat_REP_final2<-read.csv("./Analyses/min_distance_pooled.csv")
-struct_mat_w0_final<-read.csv("./Analyses/min_distance_per_replicate.csv")
+struct_mat_REP_final2<-read.csv("../Analyses/min_distance_pooled.csv")
+struct_mat_w0_final<-read.csv("../Analyses/min_distance_per_replicate.csv")
 
 
 #' 
@@ -924,7 +924,7 @@ ggplot_distTu
 # joining the two plots
 plot_grid(ggplot_distTe + theme(legend.position="none"),ggplot_distTu + theme(legend.position="none"), ncol=2, labels=c("A", "B") )
 
-save_plot("./Plots/FigS9.pdf", width=25, height=15)
-save_plot("./Plots/FigS9.png", width=25, height=15)
+save_plot("../Plots/FigS9.pdf", width=25, height=15)
+save_plot("../Plots/FigS9.png", width=25, height=15)
 
 #' 

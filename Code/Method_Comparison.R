@@ -36,7 +36,7 @@ names(Env)<-c("N", "Cd")
 eval<-FALSE # change to TRUE if want to save data
 
 # 1 - Importing data and checking it
-ca_raw<-read.csv(file = "./Data/CompetitiveAbility_Cd_G40_submit.csv", header=TRUE) # cdata from the competitive ability
+ca_raw<-read.csv(file = "../Data/CompetitiveAbility_Cd_G40_submit.csv", header=TRUE) # cdata from the competitive ability
 
 str(ca_raw) 
 # Summary of the data to be sure that everything is ok!
@@ -163,7 +163,7 @@ ca<-ca_raw
 
 ## No cadmium --------------------
 
-dir.create("./Analyses/MethodComparison/cxr_normal", showWarnings = FALSE)
+dir.create("../Analyses/MethodComparison/cxr_normal", showWarnings = FALSE)
 
 # modifying data frame to fit the type of setup that is need for CXR
 forCXR_N<-subset(ca, Env=="N")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales", "TuFemales")]
@@ -998,16 +998,16 @@ param_all_w0_lower
 param_all_w0_upper
 
 if(eval){
-write.csv(param_all_w0, "./Analyses/MethodComparison/cxr_normal/parameters_cxr_normal.csv")
-write.csv(param_all_w0_upper, "./Analyses/MethodComparison/cxr_normal/parameters_cxr_normal_upper.csv")
-write.csv(param_all_w0_lower, "./Analyses/MethodComparison/cxr_normal/parameters_cxr_normal_lower.csv")
+write.csv(param_all_w0, "../Analyses/MethodComparison/cxr_normal/parameters_cxr_normal.csv")
+write.csv(param_all_w0_upper, "../Analyses/MethodComparison/cxr_normal/parameters_cxr_normal_upper.csv")
+write.csv(param_all_w0_lower, "../Analyses/MethodComparison/cxr_normal/parameters_cxr_normal_lower.csv")
 }
 
 #### Importing parameters
 # 
-# param_all_w0<-read.csv("./Analyses/MethodComparison/cxr_normal/parameters_cxr_normal.csv")
-# param_all_w0_upper<-read.csv("./Analyses/MethodComparison/cxr_normal/parameters_cxr_normal_upper.csv")
-# param_all_w0_lower<-read.csv("./Analyses/MethodComparison/cxr_normal/parameters_cxr_normal_lower.csv")
+# param_all_w0<-read.csv("../Analyses/MethodComparison/cxr_normal/parameters_cxr_normal.csv")
+# param_all_w0_upper<-read.csv("../Analyses/MethodComparison/cxr_normal/parameters_cxr_normal_upper.csv")
+# param_all_w0_lower<-read.csv("../Analyses/MethodComparison/cxr_normal/parameters_cxr_normal_lower.csv")
 #  
 # param_all_w0<-param_all_w0[,-1]
 # param_all_w0_upper<-param_all_w0_upper[,-1]
@@ -1241,7 +1241,7 @@ str(red_ca)
 #this case we transformed all 0s into 1 (so that the log is 0) For that we need to add +1 to all data so that the variance is not changed
 
 ##### no cadmium  --------------------
-dir.create("./Analyses/MethodComparison/cxr_lambda_fixed_log", showWarnings = FALSE)
+dir.create("../Analyses/MethodComparison/cxr_lambda_fixed_log", showWarnings = FALSE)
 
 # modifying data frame to fit the type of setup that is need for CXR
 CXR_B_N<-subset(ca, Env=="N")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales", "TuFemales")]
@@ -2114,16 +2114,16 @@ param_all_B_upper<-as.data.frame(rbind(cxr_param_B_upper, cxr_param_BC_upper))
 param_all_B_lower
 param_all_B_upper
 
-#write.csv(param_all_B, "./Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed.csv")
-#write.csv(param_all_B_upper, "./Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed_upper.csv")
-#write.csv(param_all_B_lower, "./Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed_lower.csv")
+#write.csv(param_all_B, "../Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed.csv")
+#write.csv(param_all_B_upper, "../Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed_upper.csv")
+#write.csv(param_all_B_lower, "../Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed_lower.csv")
 
 
 
 ##### importing data frame
-param_all_B<-read.csv("./Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed.csv")
-param_all_B_upper<-read.csv("./Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed_upper.csv")
-param_all_B_lower<-read.csv("./Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed_lower.csv")
+param_all_B<-read.csv("../Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed.csv")
+param_all_B_upper<-read.csv("../Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed_upper.csv")
+param_all_B_lower<-read.csv("../Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed_lower.csv")
 
 param_all_B<-param_all_B[,-1]
 param_all_B_upper<-param_all_B_upper[,-1]
@@ -2373,7 +2373,7 @@ red_ca_B$Replicate<-red_ca_B$Rep
 #To do this we have to trick the cxr, by putting the intraspecific competitors in another column than the focal and then estimate only intra!
   
 ##### normal
-dir.create("./Analyses/MethodComparison/cxr_lambda_fixed_nested", showWarnings = FALSE)
+dir.create("../Analyses/MethodComparison/cxr_lambda_fixed_nested", showWarnings = FALSE)
 
 # modifying data frame to fit the type of setup that is need for CXR
 CXR_C_N<-subset(ca, Env=="N")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales", "TuFemales")]
@@ -3362,17 +3362,17 @@ param_all_C_upper<-as.data.frame(rbind(cxr_param_C_upper, cxr_param_CC_upper))
 param_all_C_lower
 param_all_C_upper
 
-#write.csv(param_all_C, "./Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed.csv")
-#write.csv(param_all_C_upper, "./Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed_upper.csv")
-#write.csv(param_all_C_lower, "./Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed_lower.csv")
+#write.csv(param_all_C, "../Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed.csv")
+#write.csv(param_all_C_upper, "../Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed_upper.csv")
+#write.csv(param_all_C_lower, "../Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed_lower.csv")
 
 
 
 
 ##### importing data frame
-param_all_C<-read.csv("./Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed.csv")
-param_all_C_upper<-read.csv("./Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed_upper.csv")
-param_all_C_lower<-read.csv("./Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed_lower.csv")
+param_all_C<-read.csv("../Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed.csv")
+param_all_C_upper<-read.csv("../Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed_upper.csv")
+param_all_C_lower<-read.csv("../Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed_lower.csv")
 
 param_all_C<-param_all_C[,-1]
 param_all_C_upper<-param_all_C_upper[,-1]
@@ -3625,9 +3625,9 @@ str(red_ca_C)
 ##### Estimating parameters
 
 # creating folder to put the analyses inside, this should be the same as the file path in the function
-dir.create("./Analyses/MethodComparison/Optim_normal", showWarnings = FALSE)
+dir.create("../Analyses/MethodComparison/Optim_normal", showWarnings = FALSE)
 
-source("./Code/Function_riker_27May.R")
+source("../Code/Function_riker_27May.R")
 # This matrix has all the comparisons that need to be done between regimes
 comparison_mat<-matrix(nrow=4, ncol=3)
 comparison_mat[1,]<-c(1,4,5)
@@ -3640,28 +3640,28 @@ comparison_mat[4,]<-c(5,1,2)
 # Attention that for intraspecific you need to add 0 in the comp and all individuals in the focal
 
 rep2<-mod_df(subset(ca,Rep==1 & Env=="N"))  
-magic_rk(filepath2 = "./Analyses/MethodComparison/Optim_normal/",data2=rep2, reps2=1, env="N", comparisons = comparison_mat)
+magic_rk(filepath2 = "../Analyses/MethodComparison/Optim_normal/",data2=rep2, reps2=1, env="N", comparisons = comparison_mat)
 
 rep2<-mod_df(subset(ca,Rep==1 & Env=="Cd"))
-magic_rk(filepath2 = "./Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=1, env="Cd", comparisons = comparison_mat)
+magic_rk(filepath2 = "../Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=1, env="Cd", comparisons = comparison_mat)
 
 rep2<-mod_df(subset(ca,Rep==3 & Env=="N"))
-magic_rk(filepath2 = "./Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=3, env="N", comparisons = comparison_mat)
+magic_rk(filepath2 = "../Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=3, env="N", comparisons = comparison_mat)
 
 rep2<-mod_df(subset(ca,Rep==3 & Env=="Cd"))
-magic_rk(filepath2 = "./Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=3, env="Cd", comparisons = comparison_mat)
+magic_rk(filepath2 = "../Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=3, env="Cd", comparisons = comparison_mat)
 
 rep2<-mod_df(subset(ca,Rep==4 & Env=="N"))
-magic_rk(filepath2 = "./Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=4, env="N", comparisons = comparison_mat)
+magic_rk(filepath2 = "../Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=4, env="N", comparisons = comparison_mat)
 
 rep2<-mod_df(subset(ca,Rep==4 & Env=="Cd"))
-magic_rk(filepath2 = "./Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=4, env="Cd", comparisons = comparison_mat)
+magic_rk(filepath2 = "../Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=4, env="Cd", comparisons = comparison_mat)
 
 rep2<-mod_df(subset(ca,Rep==5 & Env=="N"))
-magic_rk(filepath2 = "./Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=5, env="N", comparisons = comparison_mat)
+magic_rk(filepath2 = "../Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=5, env="N", comparisons = comparison_mat)
 
 rep2<-mod_df(subset(ca,Rep==5 & Env=="Cd"))
-magic_rk(filepath2 = "./Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=5, env="Cd", comparisons = comparison_mat)
+magic_rk(filepath2 = "../Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=5, env="Cd", comparisons = comparison_mat)
 
 # For two we have to change the comparison matrix
 comparison_mat2<-matrix(nrow=3, ncol=3)
@@ -3670,28 +3670,28 @@ comparison_mat2[2,]<-c(4,1,NA)
 comparison_mat2[3,]<-c(5,1,NA)
 
 rep2<-mod_df(subset(ca,Rep==2 & Env=="N"))
-magic_rk(filepath2 = "./Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=2, env="N", comparisons = comparison_mat2)
+magic_rk(filepath2 = "../Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=2, env="N", comparisons = comparison_mat2)
 
 rep2<-mod_df(subset(ca,Rep==2 & Env=="Cd"))
-magic_rk(filepath2 = "./Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=2, env="Cd", comparisons = comparison_mat2)
+magic_rk(filepath2 = "../Analyses/MethodComparison/Optim_normal/", lam2=dataForLambda, data2=rep2, reps2=2, env="Cd", comparisons = comparison_mat2)
 
 
 
 ##### Importing files of alpha and lambda
 # If needed we can import the files
-alpha_file<-list.files("./Analyses/MethodComparison/Optim_normal/", pattern="alpha_estimates") #the alphas are always tu, te (row), tu, te (col)
+alpha_file<-list.files("../Analyses/MethodComparison/Optim_normal/", pattern="alpha_estimates") #the alphas are always tu, te (row), tu, te (col)
 
-alphaUpper_file<-list.files("./Analyses/MethodComparison/Optim_normal/", pattern="alpha_upper")
+alphaUpper_file<-list.files("../Analyses/MethodComparison/Optim_normal/", pattern="alpha_upper")
 
-alphaLower_file<-list.files("./Analyses/MethodComparison/Optim_normal/", pattern="alpha_lower")
+alphaLower_file<-list.files("../Analyses/MethodComparison/Optim_normal/", pattern="alpha_lower")
 
-lambda_file<-list.files("./Analyses/MethodComparison/Optim_normal/", pattern="lambda_estimates")
+lambda_file<-list.files("../Analyses/MethodComparison/Optim_normal/", pattern="lambda_estimates")
 
 
-alpha_list<- lapply(alpha_file, function(x) read.csv(paste("./Analyses/MethodComparison/Optim_normal/",x, sep=""), header = TRUE))
-alphaUpper_list<- lapply(alphaUpper_file, function(x) read.csv(paste("./Analyses/MethodComparison/Optim_normal/",x, sep=""), header = TRUE))
-alphaLower_list<- lapply(alphaLower_file, function(x) read.csv(paste("./Analyses/MethodComparison/Optim_normal/",x, sep=""), header = TRUE))
-lambda_list<- lapply(lambda_file, function(x) read.csv(paste("./Analyses/MethodComparison/Optim_normal/",x, sep=""), header = TRUE))
+alpha_list<- lapply(alpha_file, function(x) read.csv(paste("../Analyses/MethodComparison/Optim_normal/",x, sep=""), header = TRUE))
+alphaUpper_list<- lapply(alphaUpper_file, function(x) read.csv(paste("../Analyses/MethodComparison/Optim_normal/",x, sep=""), header = TRUE))
+alphaLower_list<- lapply(alphaLower_file, function(x) read.csv(paste("../Analyses/MethodComparison/Optim_normal/",x, sep=""), header = TRUE))
+lambda_list<- lapply(lambda_file, function(x) read.csv(paste("../Analyses/MethodComparison/Optim_normal/",x, sep=""), header = TRUE))
 
 # passing from list to data frame
 # First we need to do the first iteration (to create everything)
@@ -4150,9 +4150,9 @@ pred_df_D$Tu_intra_L[which(pred_df_D$Tu_intra_L<0)]<-0
 ##### Estimate parameters
 
 # creating folder to put the analyses inside, this should be the same as the file path in the function
-dir.create("./Analyses/MethodComparison/optim_lambda_fixed", showWarnings = FALSE)
+dir.create("../Analyses/MethodComparison/optim_lambda_fixed", showWarnings = FALSE)
 
-source("./Code/Function_riker_27May.R")
+source("../Code/Function_riker_27May.R")
 # This matrix has all the comparisons that need to be done between regimes
 comparison_mat<-matrix(nrow=4, ncol=3)
 comparison_mat[1,]<-c(1,4,5)
@@ -4165,28 +4165,28 @@ comparison_mat[4,]<-c(5,1,2)
 # Attention that for intraspecific you need to add 0 in the comp and all individuals in the focal
 
 rep2<-mod_df(subset(ca,Rep==1 & Env=="N"))  
-magic_rk_lambda(filepath2 = "./Analyses/MethodComparison/optim_lambda_fixed/",data2=rep2, reps2=1, env="N", comparisons = comparison_mat, lam2=subset(mean_dens1, Rep==1 & Env=="N"))
+magic_rk_lambda(filepath2 = "../Analyses/MethodComparison/optim_lambda_fixed/",data2=rep2, reps2=1, env="N", comparisons = comparison_mat, lam2=subset(mean_dens1, Rep==1 & Env=="N"))
 
 rep2<-mod_df(subset(ca,Rep==1 & Env=="Cd"))
-magic_rk_lambda(filepath2 = "./Analyses/MethodComparison/optim_lambda_fixed/", data2=rep2, reps2=1, env="Cd", comparisons = comparison_mat, lam2=subset(mean_dens1, Rep==1 & Env=="Cd"))
+magic_rk_lambda(filepath2 = "../Analyses/MethodComparison/optim_lambda_fixed/", data2=rep2, reps2=1, env="Cd", comparisons = comparison_mat, lam2=subset(mean_dens1, Rep==1 & Env=="Cd"))
 
 rep2<-mod_df(subset(ca,Rep==3 & Env=="N"))
-magic_rk_lambda(filepath2 = "./Analyses/MethodComparison/optim_lambda_fixed/",  data2=rep2, reps2=3, env="N", comparisons = comparison_mat, lam2=subset(mean_dens1, Rep==3 & Env=="N"))
+magic_rk_lambda(filepath2 = "../Analyses/MethodComparison/optim_lambda_fixed/",  data2=rep2, reps2=3, env="N", comparisons = comparison_mat, lam2=subset(mean_dens1, Rep==3 & Env=="N"))
 
 rep2<-mod_df(subset(ca,Rep==3 & Env=="Cd"))
-magic_rk_lambda(filepath2 = "./Analyses/MethodComparison/optim_lambda_fixed/", data2=rep2, reps2=3, env="Cd", comparisons = comparison_mat, lam2=subset(mean_dens1, Rep==3 & Env=="Cd"))
+magic_rk_lambda(filepath2 = "../Analyses/MethodComparison/optim_lambda_fixed/", data2=rep2, reps2=3, env="Cd", comparisons = comparison_mat, lam2=subset(mean_dens1, Rep==3 & Env=="Cd"))
 
 rep2<-mod_df(subset(ca,Rep==4 & Env=="N"))
-magic_rk_lambda(filepath2 = "./Analyses/MethodComparison/optim_lambda_fixed/", data2=rep2, reps2=4, env="N", comparisons = comparison_mat, lam2=subset(mean_dens1, Rep==4 & Env=="N"))
+magic_rk_lambda(filepath2 = "../Analyses/MethodComparison/optim_lambda_fixed/", data2=rep2, reps2=4, env="N", comparisons = comparison_mat, lam2=subset(mean_dens1, Rep==4 & Env=="N"))
 
 rep2<-mod_df(subset(ca,Rep==4 & Env=="Cd"))
-magic_rk_lambda(filepath2 = "./Analyses/MethodComparison/optim_lambda_fixed/", data2=rep2, reps2=4, env="Cd", comparisons = comparison_mat, lam2=subset(mean_dens1, Rep==4 & Env=="Cd"))
+magic_rk_lambda(filepath2 = "../Analyses/MethodComparison/optim_lambda_fixed/", data2=rep2, reps2=4, env="Cd", comparisons = comparison_mat, lam2=subset(mean_dens1, Rep==4 & Env=="Cd"))
 
 rep2<-mod_df(subset(ca,Rep==5 & Env=="N"))
-magic_rk_lambda(filepath2 = "./Analyses/MethodComparison/optim_lambda_fixed/", data2=rep2, reps2=5, env="N", comparisons = comparison_mat, lam2=subset(mean_dens1, Rep==5 & Env=="N"))
+magic_rk_lambda(filepath2 = "../Analyses/MethodComparison/optim_lambda_fixed/", data2=rep2, reps2=5, env="N", comparisons = comparison_mat, lam2=subset(mean_dens1, Rep==5 & Env=="N"))
 
 rep2<-mod_df(subset(ca,Rep==5 & Env=="Cd"))
-magic_rk_lambda(filepath2 = "./Analyses/MethodComparison/optim_lambda_fixed/",data2=rep2, reps2=5, env="Cd", comparisons = comparison_mat, lam2=subset(mean_dens1, Rep==5 & Env=="Cd"))
+magic_rk_lambda(filepath2 = "../Analyses/MethodComparison/optim_lambda_fixed/",data2=rep2, reps2=5, env="Cd", comparisons = comparison_mat, lam2=subset(mean_dens1, Rep==5 & Env=="Cd"))
 
 # For two we have to change the comparison matrix
 comparison_mat2<-matrix(nrow=3, ncol=3)
@@ -4195,26 +4195,26 @@ comparison_mat2[2,]<-c(4,1,NA)
 comparison_mat2[3,]<-c(5,1,NA)
 
 rep2<-mod_df(subset(ca,Rep==2 & Env=="N"))
-magic_rk_lambda(filepath2 = "./Analyses/MethodComparison/optim_lambda_fixed/",  data2=rep2, reps2=2, env="N", comparisons = comparison_mat2, lam2=subset(mean_dens1, Rep==2 & Env=="N"))
+magic_rk_lambda(filepath2 = "../Analyses/MethodComparison/optim_lambda_fixed/",  data2=rep2, reps2=2, env="N", comparisons = comparison_mat2, lam2=subset(mean_dens1, Rep==2 & Env=="N"))
 
 rep2<-mod_df(subset(ca,Rep==2 & Env=="Cd"))
-magic_rk_lambda(filepath2 = "./Analyses/MethodComparison/optim_lambda_fixed/",  data2=rep2, reps2=2, env="Cd", comparisons = comparison_mat2, lam2=subset(mean_dens1, Rep==2 & Env=="Cd"))
+magic_rk_lambda(filepath2 = "../Analyses/MethodComparison/optim_lambda_fixed/",  data2=rep2, reps2=2, env="Cd", comparisons = comparison_mat2, lam2=subset(mean_dens1, Rep==2 & Env=="Cd"))
 
 ##### Importing files of alpha and lambda
 # only if needed
-# alpha_file<-list.files("./Analyses/MethodComparison/optim_lambda_fixed/", pattern="alpha_estimates") #the alphas are always tu, te (row), tu, te (col)
+# alpha_file<-list.files("../Analyses/MethodComparison/optim_lambda_fixed/", pattern="alpha_estimates") #the alphas are always tu, te (row), tu, te (col)
 # 
-# alphaUpper_file<-list.files("./Analyses/MethodComparison/optim_lambda_fixed/", pattern="alpha_upper")
+# alphaUpper_file<-list.files("../Analyses/MethodComparison/optim_lambda_fixed/", pattern="alpha_upper")
 # 
-# alphaLower_file<-list.files("./Analyses/MethodComparison/optim_lambda_fixed/", pattern="alpha_lower")
+# alphaLower_file<-list.files("../Analyses/MethodComparison/optim_lambda_fixed/", pattern="alpha_lower")
 # 
-# lambda_file<-list.files("./Analyses/MethodComparison/optim_lambda_fixed/", pattern="lambda_estimates")
+# lambda_file<-list.files("../Analyses/MethodComparison/optim_lambda_fixed/", pattern="lambda_estimates")
 # 
 # 
-# alpha_list<- lapply(alpha_file, function(x) read.csv(paste("./Analyses/MethodComparison/optim_lambda_fixed/",x, sep=""), header = TRUE))
-# alphaUpper_list<- lapply(alphaUpper_file, function(x) read.csv(paste("./Analyses/MethodComparison/optim_lambda_fixed/",x, sep=""), header = TRUE))
-# alphaLower_list<- lapply(alphaLower_file, function(x) read.csv(paste("./Analyses/MethodComparison/optim_lambda_fixed/",x, sep=""), header = TRUE))
-# lambda_list<- lapply(lambda_file, function(x) read.csv(paste("./Analyses/MethodComparison/optim_lambda_fixed/",x, sep=""), header = TRUE))
+# alpha_list<- lapply(alpha_file, function(x) read.csv(paste("../Analyses/MethodComparison/optim_lambda_fixed/",x, sep=""), header = TRUE))
+# alphaUpper_list<- lapply(alphaUpper_file, function(x) read.csv(paste("../Analyses/MethodComparison/optim_lambda_fixed/",x, sep=""), header = TRUE))
+# alphaLower_list<- lapply(alphaLower_file, function(x) read.csv(paste("../Analyses/MethodComparison/optim_lambda_fixed/",x, sep=""), header = TRUE))
+# lambda_list<- lapply(lambda_file, function(x) read.csv(paste("../Analyses/MethodComparison/optim_lambda_fixed/",x, sep=""), header = TRUE))
 
 # passing from list to data frame
 # First we need to do the first iteration (to create everything)
@@ -4990,6 +4990,6 @@ ggplot(distance_sum, aes(x=method, y=distance, colour=method, fill=method))+
   geom_text(data=dist_sum, aes(x=method, label=paste(round(mean,3), round(se,3), sep="\n+/-")), y=22, colour="black")+
   scale_y_continuous(name="Estimated euclidean distance\n (predicted-observed")
 
-save_plot("./Plots/FigS2.pdf", width = 20, height=10)
-save_plot("./Plots/FigS2.png", width = 20, height=10)
+save_plot("../Plots/FigS2.pdf", width = 20, height=10)
+save_plot("../Plots/FigS2.png", width = 20, height=10)
 

@@ -60,11 +60,11 @@ eval<-FALSE
 #' ### Estimated parameters per replicate
 ## ---------------------------
 # Importing the mean parameters
-param_all_w0<-read.csv("./Analyses/cxr_normal_allEqual/parameters_cxr_normal_new.csv")
+param_all_w0<-read.csv("../Analyses/cxr_normal_allEqual/parameters_cxr_normal_new.csv")
 # Importing the upper values of the parameters
-param_all_w0_upper<-read.csv("./Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper_new.csv")
+param_all_w0_upper<-read.csv("../Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper_new.csv")
 # Importing the lower values of the parameters
-param_all_w0_lower<-read.csv( "./Analyses/cxr_normal_allEqual/parameters_cxr_normal_lower_new.csv")
+param_all_w0_lower<-read.csv( "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_lower_new.csv")
 
 # Removing the first column
 param_all_w0<-param_all_w0[,-1]
@@ -75,11 +75,11 @@ param_all_w0_lower<-param_all_w0_lower[,-1]
 #' ### Estimated parameters for pooled data
 ## ---------------------------
 # Importing the mean parameters
-param_all_REP<-read.csv("./Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_best.csv")
+param_all_REP<-read.csv("../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_best.csv")
 # Importing the upper values of the parameters
-  param_all_REP_upper<-read.csv("./Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_upper_best.csv")
+  param_all_REP_upper<-read.csv("../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_upper_best.csv")
 # Importing the lower values of the parameters
-  param_all_REP_lower<-read.csv( "./Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_lower_best.csv")
+  param_all_REP_lower<-read.csv( "../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_lower_best.csv")
 
 param_all_REP<-param_all_REP[,-1]
 param_all_REP_upper<-param_all_REP_upper[,-1]
@@ -602,7 +602,7 @@ set.seed(1809) # Setting the seed to ensure reproducibility
 nboot<-10000 # Number of bootstrap samples
 
 if(!eval){
-  load(file="./Analyses/Bootstrap_stats_tests_10000.RData")
+  load(file="../Analyses/Bootstrap_stats_tests_10000.RData")
 }
 
 #' 
@@ -1058,7 +1058,7 @@ length(which(boot_te_evolN$inter_p_int<=as.data.frame(Anova(inter_te_an_1))[3,3]
 ## ---------------------------
 # save the results so we can reuse it later
 if(eval){
-save.image(file="./Bootstrap_stats_tests_1.RData")
+save.image(file="../Analyses/Bootstrap_stats_tests_10000.RData")
   }
 
 #' 
@@ -1451,9 +1451,9 @@ struct_mat_w0$distanceTe_upper<-sapply(c(1:length(struct_mat_w0$ND)), function(x
 # If you are running the code to evaluate and store data 
 if(eval){
   # write the results for the pooled data
-  write.csv(struct_mat_REP, "./Analyses/structural_REP_new.csv")
+  write.csv(struct_mat_REP, "../Analyses/structural_REP_new.csv")
   # write the results for the replicate data
-  write.csv(struct_mat_w0, "./Analyses/structural_REP_w0_new.csv")
+  write.csv(struct_mat_w0, "../Analyses/structural_REP_w0_new.csv")
 }
 
 
@@ -1565,8 +1565,8 @@ struct_mat_w0_final<-as.data.frame(cbind(struct_mat_w0_final, aux_min_distance_w
 
 if(eval){
 # Write for the figure
-write.csv(struct_mat_REP_final,"./Analyses/min_distance_pooled.csv")
-write.csv(struct_mat_w0_final,"./Analyses/min_distance_per_replicate.csv")
+write.csv(struct_mat_REP_final,"../Analyses/min_distance_pooled.csv")
+write.csv(struct_mat_w0_final,"../Analyses/min_distance_per_replicate.csv")
 }
 
 
@@ -1578,7 +1578,7 @@ write.csv(struct_mat_w0_final,"./Analyses/min_distance_per_replicate.csv")
 #' ## Importing data
 #' 
 ## ---------------------------
-coex_g42<-read.csv("./Data/Coexistence_Cd_G42_submit.csv", header=TRUE) # Data from the population dynamics experiment
+coex_g42<-read.csv("../Data/Coexistence_Cd_G42_submit.csv", header=TRUE) # Data from the population dynamics experiment
 
 # Transforming columns into factors
 coex_g42$Rep2<-as.factor(coex_g42$Rep)
@@ -2037,7 +2037,7 @@ test(emtrends(m7, var="pred_T1", type="response"))
 
 # writing file
 if(eval){
-write.csv(sum_observed_coex_rep, file="./Analyses/popDyn_pooledData.csv")
+write.csv(sum_observed_coex_rep, file="../Analyses/popDyn_pooledData.csv")
 }
 
 #' 
@@ -2050,7 +2050,7 @@ sum_observed_coex_ALL2<-sum2_observed_coex_ALL %>%
 
 if(eval){
 #writing file
-write.csv(sum_observed_coex_ALL2, file="./Analyses/popDyn_replicates.csv")
+write.csv(sum_observed_coex_ALL2, file="../Analyses/popDyn_replicates.csv")
 }
 
 m7_rep2<-glmmTMB(meanRatio~0+mean_pred, data=sum_observed_coex_ALL2, family="Gamma")

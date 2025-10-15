@@ -49,21 +49,21 @@ names(regimeTe)<-c("SR4", "SR5")
 #' This chunk is used to import data, checking data and creating the columns that are necessary
 #' 
 ## ---------------------------------------------------------------------------------------
-ca_raw<-read.csv(file = "./Data/CompetitiveAbility_Cd_G40_submit.csv", header=TRUE) # cdata from the competitive ability
+ca<-read.csv(file = "../Data/CompetitiveAbility_Cd_G40_submit.csv", header=TRUE) # cdata from the competitive ability
 
-str(ca_raw) 
+str(ca) 
 # Summary of the data to be sure that everything is ok!
-summary(as.factor(ca_raw$Foca_rawlSR))
+summary(as.factor(ca$FocalSR))
 
-ca_raw$Block2<-as.factor(ca_raw$Block)
-ca_raw$Rep2<-as.factor(ca_raw$Rep)
-ca_raw$Disk2<-as.factor(ca_raw$Disk)
-ca_raw$Leaf2<-as.factor(ca_raw$Leaf)
-ca_raw$Env2<-as.factor(ca_raw$Env)
-ca_raw$FocalSR2<-as.factor(ca_raw$FocalSR)
-ca_raw$CompSR2<-as.factor(ca_raw$CompSR)
-ca_raw$Type2<-as.factor(ca_raw$Type)
-ca_raw$Focal_Female2<-as.factor(ca_raw$Focalfemale)
+ca$Block2<-as.factor(ca$Block)
+ca$Rep2<-as.factor(ca$Rep)
+ca$Disk2<-as.factor(ca$Disk)
+ca$Leaf2<-as.factor(ca$Leaf)
+ca$Env2<-as.factor(ca$Env)
+ca$FocalSR2<-as.factor(ca$FocalSR)
+ca$CompSR2<-as.factor(ca$CompSR)
+ca$Type2<-as.factor(ca$Type)
+ca$Focal_Female2<-as.factor(ca$Focalfemale)
 
 #### Creating columns that are needed
 # This computes the number of focal females that were alive after 3 days (Tu and Te)
