@@ -9,7 +9,6 @@ The Data folder contains the raw data
 The Code folder contains the scripts to perform the analyses
 The Analyses folder contains intermediate outputs required for the analyses.
 The Plots folder contains the figures used in the manuscript (output from the code)
-The hml_files folder contains html files of the code and output of the main analyses and figures.
 
 Inside each folder there is a ReadMe file explaining the different files and folder available.
 

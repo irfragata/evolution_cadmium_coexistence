@@ -3,39 +3,59 @@
 #' output: html_notebook
 #' ---
 #' 
-#' # Functions, general information and packages
+
+# Note the script should be run from the main directory of the repository.
+
+# Checking if we are inside the correct folder, otherwise changing directory to the previous folder
+file_exists<-"Session_Info"
+
+if(file.exists(file_exists)){
+  setwd("../")
+  if(!file.exists("Code")){
+    print("Please ensure that the script is run from the main repository folder")
+  }
+}else{
+  if(!file.exists("Code")){
+    print("Please ensure that the script is run from the main repository folder")
+  }
+}
+
+# Functions, general information and packages---------------------------
 #' 
-## ---------------------------
-rm(list=ls())
+## 
+if(!require("plyr")){
+  install.packages("plyr")
+}
+if(!require("dplyr")){
+  install.packages("dplyr")
+}
+if(!require("tidyr")){
+  install.packages("tidyr")
+}
+if(!require("cxr")){
+  install.packages("cxr")
+}
+if(!require("MASS")){
+  install.packages("MASS")
+}
+if(!require("mvtnorm")){
+  install.packages("mvtnorm")
+}
+if(!require("DescTools")){
+  install.packages("DescTools")
+}
+if(!require("LSAfun")){
+  install.packages("LSAfun")
+}
+
 library(plyr)
-library(tidyverse)
-library(car)
-library(fitdistrplus)
+library(dplyr)
 library(tidyr)
 library(cxr)
 library(MASS)
 library(mvtnorm)
-library(lme4)
-library(lmerTest)
-library(emmeans)
-library(glmmTMB)
-library(MASS)
 library(DescTools)
-library(performance)
-library(DHARMa)
-library(effects)
-library(marginaleffects)
 library(LSAfun)
-library(arm)
-library(cowplot)
-library(grid)
-library(gridExtra)
-
-theme_plots<-theme(axis.text = element_text(size=14), axis.title = element_text(size=14, face="bold"), legend.text = element_text(size=12), strip.text = element_text(size=14), plot.title = element_text(size=14, face="bold"), panel.grid=element_line(colour="white"), panel.background = element_rect(fill="white") , axis.line = element_line(linewidth = 0.5, linetype = "solid",colour = "black"), strip.background = element_rect(fill="white"))
-
-save_plot<-function(dir, width=15, height=10, ...){
-  ggsave(dir, width = width, height = height, units = c("cm"))
-}
 
 # Creating vectors with regime names to use for plots
 regimeTu<-c("Tu \ncontrol", "Tu evolved \n in cadmium")
@@ -45,11 +65,11 @@ regimeTe<-c("Te \n control", "Te evolved \n in cadmium")
 names(regimeTe)<-c("SR4", "SR5")
 
 #' 
-#' # Importing data
+# Import data---------------------------
 #' This chunk is used to import data, checking data and creating the columns that are necessary
 #' 
-## ---------------------------
-ca<-read.csv(file = "../Data/CompetitiveAbility_Cd_G40_submit.csv", header=TRUE) # data from the competitive ability
+## 
+ca<-read.csv(file = "./Data/CompetitiveAbility_Cd_G40_submit.csv", header=TRUE) # data from the competitive ability
 
 str(ca) 
 # Summary of the data to be sure that everything is ok!
@@ -175,25 +195,31 @@ ca$GrowthRateOA<-sapply(c(1:length(ca[,1])), function(x){
 
 
 #' 
-#' # Running cxr
+# Running cxr---------------------------
 #' 
 #' ### Setup cxr
 #' Setting the seed number and the number of bootstrap samples.
 #' 
-## ---------------------------
+## 
 set.seed(1809)
 bootN<-2000
 eval<- TRUE
 
 # Creating directory to store the results
-dir.create("../Analyses/cxr_normal_allEqual", showWarnings = FALSE)
+# If the directory does not exist create it 
+if(!dir.exists("./Analyses/")){
+  dir.create("./Analyses/")
+}
+dir.create("./Analyses/cxr_normal_Replicates", showWarnings = FALSE)
 
 #' 
 #' ## Set up data
 #' 
 #' ### Creating a data frame for the no cadmium environment
 #' 
-## ---------------------------
+## Data setup no cadmium ---------------------------
+print("Creating data files for the no cadmium environment")
+
 forCXR_N<-subset(ca, Env=="N")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales", "TuFemales")]
   
   forCXR_N$Focal<-mapvalues(forCXR_N$FocalSR, c(1,2,4,5), c("SR1", "SR2","SR4","SR5"))
@@ -270,7 +296,7 @@ forCXR_N<-subset(ca, Env=="N")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales
   #removing rows for which there is no data for fitness
   forCXR_N<-forCXR_N[-which(is.na(forCXR_N$fitness)),]
 
-  # all data gets +1 because of the 0 problem
+  # Adding +1 to all data to allow for the 0s to be included in the cxr estimates
   forCXR_N$fitness<-forCXR_N$fitness+1
   
   # vector that tells which are the selection regimes, the columns have to have the same name
@@ -280,8 +306,11 @@ forCXR_N<-subset(ca, Env=="N")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales
 #' 
 #' ### Creating a data frame for the cadmium environment
 #' This is the same procedure as above
-## ---------------------------
+## Data setup cadmium environment ---------------------------
+
+print("Creating data files for the cadmium environment")
 # subsetting data to only contain cadmium
+
 forCXR_Cd<-subset(ca, Env=="Cd")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales", "TuFemales")]
   
   forCXR_Cd$Focal<-mapvalues(forCXR_Cd$FocalSR, c(1,2,4,5), c("SR1", "SR2","SR4","SR5"))
@@ -356,30 +385,16 @@ forCXR_Cd<-subset(ca, Env=="Cd")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemal
   #removing rows for which there is no data for fitness
   forCXR_Cd<-forCXR_Cd[-which(is.na(forCXR_Cd$fitness)),]
 
-  # all data gets +1 because of the 0 problem
+  # Adding +1 to all data to allow for the 0s to be included in the cxr estimates
   forCXR_Cd$fitness<-forCXR_Cd$fitness+1
   
   # vector that tells which are the selection regimes, the columns have to have the same name
   my.reg <- c("SR1", "SR2","SR4","SR5")
 
 #' 
-#' ### Data for Pooled estimates for no cadmium
-#' Creating a list with all the data. For the pooled estimates this corresponds to joining all replicates. For the replicate data there is a list per replicate
-## ---------------------------
-  # Do list per replicate and environment
-  Rep<-list(SR1= subset(forCXR_N, Focal=="SR1")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR2= subset(forCXR_N, Focal=="SR2")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR4= subset(forCXR_N,  Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_N, Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
-
-#' 
-#' ### Data for Pooled estimates for cadmium
-#' 
-## ---------------------------
-# Do list per replicate and environment
-  Rep_Cd<-list(SR1= subset(forCXR_Cd, Focal=="SR1")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR2= subset(forCXR_Cd, Focal=="SR2")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR4= subset(forCXR_Cd,  Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_Cd, Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
-
-#' 
 #' ### Data for replicates no cadmium
 #' 
-## ---------------------------
+## Replicate list no cadmium---------------------------
 # Do list per replicate and environment
   R1<-list(SR1= subset(forCXR_N, Rep==1 & Focal=="SR1")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR2= subset(forCXR_N, Rep==1 & Focal=="SR2")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR4= subset(forCXR_N, Rep==1 & Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_N, Rep==1 & Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
   
@@ -395,7 +410,7 @@ forCXR_Cd<-subset(ca, Env=="Cd")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemal
 #' 
 #' ### Data for replicates cadmium
 #' 
-## ---------------------------
+## Replicate list cadmium---------------------------
 Rep_R1_Cd<-list(SR1= subset(forCXR_Cd, Rep==1 & Focal=="SR1")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR2= subset(forCXR_Cd, Rep==1 & Focal=="SR2")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR4= subset(forCXR_Cd, Rep==1 & Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_Cd, Rep==1 & Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
   
   Rep_R2_Cd<-list(SR1= subset(forCXR_Cd, Rep==2 & Focal=="SR1")[,c("fitness", "SR1","SR4", "SR5")], SR4= subset(forCXR_Cd, Rep==2 & Focal=="SR4")[,c("fitness", "SR1", "SR4")], SR5= subset(forCXR_Cd, Rep==2 & Focal=="SR5")[,c("fitness", "SR1", "SR5")])
@@ -409,18 +424,19 @@ Rep_R1_Cd<-list(SR1= subset(forCXR_Cd, Rep==1 & Focal=="SR1")[,c("fitness", "SR1
 #' 
 #' ## Data for the initial values
 #' Creating a data frame with the initial values. The values to use have been tested in the parameter exploration code file.
-## ---------------------------
 replicates_initial<-as.data.frame(expand.grid(Replicates=c(1,2,3,4,5), Environment=c("N", "Cd"), lambda=0, alpha_intra=0, alpha_inter=0))
 
-replicates_initial$lambda<-2.5
-replicates_initial$alpha_intra<-0
-replicates_initial$alpha_inter<-0
+replicates_initial$lambda<-1.1001
+replicates_initial$alpha_intra<- 0
+replicates_initial$alpha_inter<- -0.1
 
 #' 
 #' # Running cxr for the no cadmium environment
 #' For each replicate we use cxr multifit function and then store the results.
 #' 
-## ---------------------------
+## Run cxr for no cadmium env---------------------------
+print("Running cxr to get parameter estimates for the no cadmium environment")
+### Replicate 1-----
 obs.R1_w0<-cxr_pm_multifit(data = R1,
                              focal_column = my.reg,
                              model_family = "RK",
@@ -437,8 +453,9 @@ obs.R1_w0<-cxr_pm_multifit(data = R1,
                               bootstrap_samples = bootN)
 
 # save observation
-save(obs.R1_w0,file= "../Analyses_restart/cxr_normal_allEqual/cxr_R1_N.RData")
+save(obs.R1_w0,file= "./Analyses/cxr_normal_Replicates/cxr_R1_N.RData")
 
+### Replicate 3-----
 obs.R3_w0<-cxr_pm_multifit(data = R3,
                              focal_column = my.reg,
                              model_family = "RK",
@@ -454,8 +471,10 @@ obs.R3_w0<-cxr_pm_multifit(data = R3,
                              # no standard errors
                               bootstrap_samples = bootN)
 
-save(obs.R3_w0,file= "../Analyses_restart/cxr_normal_allEqual/cxr_R3_N.RData")
+#save data
+save(obs.R3_w0,file= "./Analyses/cxr_normal_Replicates/cxr_R3_N.RData")
 
+### Replicate 4-----
 obs.R4_w0<-cxr_pm_multifit(data = R4,
                              focal_column = my.reg,
                              model_family = "RK",
@@ -470,9 +489,10 @@ obs.R4_w0<-cxr_pm_multifit(data = R4,
                              fixed_terms = NULL,
                              # no standard errors
                               bootstrap_samples = bootN)
+# save data
+save(obs.R4_w0,file= "./Analyses/cxr_normal_Replicates/cxr_R4_N.RData")
 
-save(obs.R4_w0,file= "../Analyses_restart/cxr_normal_allEqual/cxr_R4_N.RData")
-
+### Replicate 5-----
 obs.R5_w0<-cxr_pm_multifit(data = R5,
                              focal_column = my.reg,
                              model_family = "RK",
@@ -487,10 +507,13 @@ obs.R5_w0<-cxr_pm_multifit(data = R5,
                              fixed_terms = NULL,
                              # no standard errors
                               bootstrap_samples = bootN)
-save(obs.R5_w0,file= "../Analyses_restart/cxr_normal_allEqual/cxr_R5_N.RData")
+# save data
+save(obs.R5_w0,file= "./Analyses/cxr_normal_Replicates/cxr_R5_N.RData")
 
 # Because there is no SR2 for replicate 2 we need to estimate SR1 and SR4 and SR5 in a different way
+### Replicate 2-----
 
+# fitting for SR1
 obs.R2_w0_sr1<-cxr_pm_fit(data = R2[[1]],
                             focal_column = my.reg[1],
                             model_family = "RK",
@@ -505,7 +528,7 @@ obs.R2_w0_sr1<-cxr_pm_fit(data = R2[[1]],
                             fixed_terms = NULL,
                             # no standard errors
                              bootstrap_samples = bootN)
-    
+    # Fitting for sr4 lambda and intra
     obs.R2_w0_sr4<-cxr_pm_fit(data = R2[[2]][which(R2[[2]][,"SR1"]==0),c("fitness", "SR4")],
                             focal_column =NULL,
                             model_family = "RK",
@@ -520,6 +543,7 @@ obs.R2_w0_sr1<-cxr_pm_fit(data = R2[[1]],
                             # no standard errors
                              bootstrap_samples = bootN)
     
+    # fitting for sr4 inter
     obs.R2_w0_sr4_inter<-cxr_pm_fit(data = R2[[2]][which(R2[[2]][,"SR1"]!=0),c("fitness", "SR1")],
                                   focal_column =NULL,
                                   model_family = "RK",
@@ -532,7 +556,7 @@ obs.R2_w0_sr1<-cxr_pm_fit(data = R2[[1]],
                                   fixed_terms = list(lambda=obs.R2_w0_sr4$lambda),
                                   # no standard errors
                                    bootstrap_samples = bootN)
-    
+    # fitting for SR5 lambda and intra
     obs.R2_w0_sr5<-cxr_pm_fit(data = R2[[3]][which(R2[[3]][,"SR1"]==0),c("fitness", "SR5")],
                             focal_column =NULL,
                             model_family = "RK",
@@ -547,6 +571,7 @@ obs.R2_w0_sr1<-cxr_pm_fit(data = R2[[1]],
                             # no standard errors
                              bootstrap_samples = bootN)
     
+    #fitting for SR5 inter
     obs.R2_w0_sr5_inter<-cxr_pm_fit(data = R2[[3]][which(R2[[3]][,"SR1"]!=0),c("fitness", "SR1")],
                                   focal_column =NULL,
                                   model_family = "RK",
@@ -559,18 +584,20 @@ obs.R2_w0_sr1<-cxr_pm_fit(data = R2[[1]],
                                   fixed_terms = list(lambda=obs.R2_w0_sr5$lambda),
                                   # no standard errors
                                    bootstrap_samples = bootN)
-
-save(obs.R2_w0_sr1, file="../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR1_N.RData")
-save(obs.R2_w0_sr4,file= "../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR4_N.RData")
-save(obs.R2_w0_sr5, file="../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR5_N.RData")
-save(obs.R2_w0_sr4_inter, file="../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR4_inter_N.RData")
-save(obs.R2_w0_sr5_inter, file="../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR5_inter_N.RData")
+# saving data
+save(obs.R2_w0_sr1, file="./Analyses/cxr_normal_Replicates/cxr_R2_SR1_N.RData")
+save(obs.R2_w0_sr4,file= "./Analyses/cxr_normal_Replicates/cxr_R2_SR4_N.RData")
+save(obs.R2_w0_sr5, file="./Analyses/cxr_normal_Replicates/cxr_R2_SR5_N.RData")
+save(obs.R2_w0_sr4_inter, file="./Analyses/cxr_normal_Replicates/cxr_R2_SR4_inter_N.RData")
+save(obs.R2_w0_sr5_inter, file="./Analyses/cxr_normal_Replicates/cxr_R2_SR5_inter_N.RData")
 
 
 #' 
-#' ## Saving parameters and errors
+### Storing parameter estimates (mean, lower and upper)---------------------------
 #' Storing the parameter estimates and the lower and upper bounds in a data frame so we can use it later.
-## ---------------------------
+
+print("Creating data frame to store mean parameter estimates for the no cadmium environment")
+#### Mean estimates ------
 # creating data frame where to store the data
 cxr_param_w0<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Replicate=c(1,2,3,4,5), Environment=c("N"))
   cxr_param_w0$Tu_lambda<-0
@@ -633,9 +660,9 @@ cxr_param_w0<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), 
   cxr_param_w0[which(cxr_param_w0$Replicate==5),"Te_inter"]<-c(obs.R5_w0$alpha_matrix[3,1], obs.R5_w0$alpha_matrix[3,2],obs.R5_w0$alpha_matrix[4,1], obs.R5_w0$alpha_matrix[4,2])
 
 #' 
-#' #### Data frame with lower estimates
-## ---------------------------
+#### Lower estimates ------
 ### Here we will apply the same reasoning but now estimating the lower estimates, using the stats from cxr. Lower bounds correspond to mean-error.
+  print("Creating data frame to store lower parameter estimates for the no cadmium environment")
   
   cxr_param_w0_lower<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Replicate=c(1,2,3,4,5), Environment=c("N"))
   cxr_param_w0_lower$Tu_lambda<-0
@@ -699,9 +726,10 @@ cxr_param_w0<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), 
 #' 
 #' #### Data frame with upper estimates
 #' 
-## ---------------------------
+#### Upper estimates ---------------------------
 ### Here we will apply the same reasoning but now estimating the upper estimates, using the stats from cxr. Upper bounds correspond to mean-error.
-  
+print("Creating data frame to store upper parameter estimates for the no cadmium environment")
+    
   cxr_param_w0_upper<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Replicate=c(1,2,3,4,5), Environment=c("N"))
   cxr_param_w0_upper$Tu_lambda<-0
   cxr_param_w0_upper$Te_lambda<-0
@@ -763,18 +791,26 @@ cxr_param_w0<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), 
   
 
 #' 
-#' ## Saving pooled parameter estimates 
-#' intermediate files in case something goes wrong
-## ---------------------------
-write.csv(cxr_param_w0, "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_N.csv")
-  write.csv(cxr_param_w0_upper, "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper_N.csv")
-  write.csv(cxr_param_w0_lower, "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_lower_N.csv")
+### Saving parameter estimates--------------------------- 
+#' saving intermediate files in case something goes wrong
+## 
+
+# mean estimates  
+write.csv(cxr_param_w0, "./Analyses/cxr_normal_Replicates/parameters_cxr_normal_N.csv")
+
+# upper estimates
+  write.csv(cxr_param_w0_upper, "./Analyses/cxr_normal_Replicates/parameters_cxr_normal_upper_N.csv")
+  
+# Lower estimates
+  write.csv(cxr_param_w0_lower, "./Analyses/cxr_normal_Replicates/parameters_cxr_normal_lower_N.csv")
 
 
 #' 
-#' # Running cxr for cadmium environment
+## Running cxr for cadmium environment---------------------------
 #' Here we apply exactly the same reasoning as above but for the data from cadmium environment
-## ---------------------------
+## 
+print("Running cxr to get parameter estimates for the cadmium environment")  
+### Replicate 1----- 
 obs.R1_Cd_w0<-cxr_pm_multifit(data = Rep_R1_Cd,
                              focal_column = my.reg,
                              model_family = "RK",
@@ -783,13 +819,13 @@ obs.R1_Cd_w0<-cxr_pm_multifit(data = Rep_R1_Cd,
                              alpha_form = "pairwise",
                              lambda_cov_form = "none",
                              alpha_cov_form = "none",
-                             initial_values = list(lambda = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==1 & replicates_initial_rmse$Environment=="Cd"),"lambda"],
-                                                   alpha_intra = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==1 & replicates_initial_rmse$Environment=="Cd"),"alpha_intra"],
-                                                   alpha_inter = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==1 & replicates_initial_rmse$Environment=="Cd"),"alpha_inter"]),
+                             initial_values = list(lambda = replicates_initial[which(replicates_initial$Replicates==1 & replicates_initial$Environment=="Cd"),"lambda"],
+                                                   alpha_intra = replicates_initial[which(replicates_initial$Replicates==1 & replicates_initial$Environment=="Cd"),"alpha_intra"],
+                                                   alpha_inter = replicates_initial[which(replicates_initial$Replicates==1 & replicates_initial$Environment=="Cd"),"alpha_inter"]),
                              fixed_terms = NULL,
                              # no standard errors
                               bootstrap_samples = bootN)
-
+### Replicate 3-----
 obs.R3_Cd_w0<-cxr_pm_multifit(data = Rep_R3_Cd,
                              focal_column = my.reg,
                              model_family = "RK",
@@ -798,13 +834,13 @@ obs.R3_Cd_w0<-cxr_pm_multifit(data = Rep_R3_Cd,
                              alpha_form = "pairwise",
                              lambda_cov_form = "none",
                              alpha_cov_form = "none",
-                             initial_values = list(lambda = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==3 & replicates_initial_rmse$Environment=="Cd"),"lambda"],
-                                                   alpha_intra = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==3 & replicates_initial_rmse$Environment=="Cd"),"alpha_intra"],
-                                                   alpha_inter = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==3 & replicates_initial_rmse$Environment=="Cd"),"alpha_inter"]),
+                             initial_values = list(lambda = replicates_initial[which(replicates_initial$Replicates==3 & replicates_initial$Environment=="Cd"),"lambda"],
+                                                   alpha_intra = replicates_initial[which(replicates_initial$Replicates==3 & replicates_initial$Environment=="Cd"),"alpha_intra"],
+                                                   alpha_inter = replicates_initial[which(replicates_initial$Replicates==3 & replicates_initial$Environment=="Cd"),"alpha_inter"]),
                              fixed_terms = NULL,
                              # no standard errors
                               bootstrap_samples = bootN)
-
+### Replicate 4-----
 obs.R4_Cd_w0<-cxr_pm_multifit(data = Rep_R4_Cd,
                              focal_column = my.reg,
                              model_family = "RK",
@@ -813,14 +849,14 @@ obs.R4_Cd_w0<-cxr_pm_multifit(data = Rep_R4_Cd,
                              alpha_form = "pairwise",
                              lambda_cov_form = "none",
                              alpha_cov_form = "none",
-                             initial_values = list(lambda = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==4 & replicates_initial_rmse$Environment=="Cd"),"lambda"],
-                                                   alpha_intra = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==4 & replicates_initial_rmse$Environment=="Cd"),"alpha_intra"],
-                                                   alpha_inter = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==4 & replicates_initial_rmse$Environment=="Cd"),"alpha_inter"]),
+                             initial_values = list(lambda = replicates_initial[which(replicates_initial$Replicates==4 & replicates_initial$Environment=="Cd"),"lambda"],
+                                                   alpha_intra = replicates_initial[which(replicates_initial$Replicates==4 & replicates_initial$Environment=="Cd"),"alpha_intra"],
+                                                   alpha_inter = replicates_initial[which(replicates_initial$Replicates==4 & replicates_initial$Environment=="Cd"),"alpha_inter"]),
                              fixed_terms = NULL,
                              # no standard errors
                               bootstrap_samples = bootN)
 
-
+### Replicate 5-----
 obs.R5_Cd_w0<-cxr_pm_multifit(data = Rep_R5_Cd,
                              focal_column = my.reg,
                              model_family = "RK",
@@ -829,14 +865,14 @@ obs.R5_Cd_w0<-cxr_pm_multifit(data = Rep_R5_Cd,
                              alpha_form = "pairwise",
                              lambda_cov_form = "none",
                              alpha_cov_form = "none",
-                             initial_values = list(lambda = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==5 & replicates_initial_rmse$Environment=="Cd"),"lambda"],
-                                                   alpha_intra = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==5 & replicates_initial_rmse$Environment=="Cd"),"alpha_intra"],
-                                                   alpha_inter = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==5 & replicates_initial_rmse$Environment=="Cd"),"alpha_inter"]),
+                             initial_values = list(lambda = replicates_initial[which(replicates_initial$Replicates==5 & replicates_initial$Environment=="Cd"),"lambda"],
+                                                   alpha_intra = replicates_initial[which(replicates_initial$Replicates==5 & replicates_initial$Environment=="Cd"),"alpha_intra"],
+                                                   alpha_inter = replicates_initial[which(replicates_initial$Replicates==5 & replicates_initial$Environment=="Cd"),"alpha_inter"]),
                              fixed_terms = NULL,
                              # no standard errors
                               bootstrap_samples = bootN)
 
-
+### Replicate 2-----
 # Because there is no SR2 for replicate 2 we need to estimate SR1 and SR4 and SR5 in a different way
 
 obs.R2_Cd_w0_sr1<-cxr_pm_fit(data = Rep_R2_Cd[[1]],
@@ -847,9 +883,9 @@ obs.R2_Cd_w0_sr1<-cxr_pm_fit(data = Rep_R2_Cd[[1]],
                             alpha_form = "pairwise",
                             lambda_cov_form = "none",
                             alpha_cov_form = "none",
-                            initial_values = list(lambda = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==2 & replicates_initial_rmse$Environment=="Cd"),"lambda"],
-                                                  alpha_intra = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==2 & replicates_initial_rmse$Environment=="Cd"),"alpha_intra"],
-                                                  alpha_inter = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==2 & replicates_initial_rmse$Environment=="Cd"),"alpha_inter"]),
+                            initial_values = list(lambda = replicates_initial[which(replicates_initial$Replicates==2 & replicates_initial$Environment=="Cd"),"lambda"],
+                                                  alpha_intra = replicates_initial[which(replicates_initial$Replicates==2 & replicates_initial$Environment=="Cd"),"alpha_intra"],
+                                                  alpha_inter = replicates_initial[which(replicates_initial$Replicates==2 & replicates_initial$Environment=="Cd"),"alpha_inter"]),
                             fixed_terms = NULL,
                             # no standard errors
                              bootstrap_samples = bootN)
@@ -862,8 +898,8 @@ obs.R2_Cd_w0_sr1<-cxr_pm_fit(data = Rep_R2_Cd[[1]],
                             alpha_form = "global",
                             lambda_cov_form = "none",
                             alpha_cov_form = "none",
-                            initial_values = list(lambda = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==2 & replicates_initial_rmse$Environment=="Cd"),"lambda"],
-                                                  alpha_inter = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==2 & replicates_initial_rmse$Environment=="Cd"),"alpha_intra"]),
+                            initial_values = list(lambda = replicates_initial[which(replicates_initial$Replicates==2 & replicates_initial$Environment=="Cd"),"lambda"],
+                                                  alpha_inter = replicates_initial[which(replicates_initial$Replicates==2 & replicates_initial$Environment=="Cd"),"alpha_intra"]),
                             fixed_terms = NULL,
                             # no standard errors
                              bootstrap_samples = bootN)
@@ -876,7 +912,7 @@ obs.R2_Cd_w0_sr1<-cxr_pm_fit(data = Rep_R2_Cd[[1]],
                                   alpha_form = "global",
                                   lambda_cov_form = "none",
                                   alpha_cov_form = "none",
-                                  initial_values = list(alpha_inter=replicates_initial_rmse[which(replicates_initial_rmse$Replicates==2 & replicates_initial_rmse$Environment=="Cd"),"alpha_inter"]),
+                                  initial_values = list(alpha_inter=replicates_initial[which(replicates_initial$Replicates==2 & replicates_initial$Environment=="Cd"),"alpha_inter"]),
                                   fixed_terms = list(lambda=obs.R2_Cd_w0_sr4$lambda),
                                   # no standard errors
                                    bootstrap_samples = bootN)
@@ -889,8 +925,8 @@ obs.R2_Cd_w0_sr1<-cxr_pm_fit(data = Rep_R2_Cd[[1]],
                             alpha_form = "global",
                             lambda_cov_form = "none",
                             alpha_cov_form = "none",
-                            initial_values = list(lambda = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==2 & replicates_initial_rmse$Environment=="Cd"),"lambda"],
-                                                  alpha_inter = replicates_initial_rmse[which(replicates_initial_rmse$Replicates==2 & replicates_initial_rmse$Environment=="Cd"),"alpha_intra"]),
+                            initial_values = list(lambda = replicates_initial[which(replicates_initial$Replicates==2 & replicates_initial$Environment=="Cd"),"lambda"],
+                                                  alpha_inter = replicates_initial[which(replicates_initial$Replicates==2 & replicates_initial$Environment=="Cd"),"alpha_intra"]),
                             fixed_terms = NULL,
                             # no standard errors
                              bootstrap_samples = bootN)
@@ -903,17 +939,19 @@ obs.R2_Cd_w0_sr1<-cxr_pm_fit(data = Rep_R2_Cd[[1]],
                                   alpha_form = "global",
                                   lambda_cov_form = "none",
                                   alpha_cov_form = "none",
-                                  initial_values = list(alpha_inter=replicates_initial_rmse[which(replicates_initial_rmse$Replicates==2 & replicates_initial_rmse$Environment=="Cd"),"alpha_inter"]),
+                                  initial_values = list(alpha_inter=replicates_initial[which(replicates_initial$Replicates==2 & replicates_initial$Environment=="Cd"),"alpha_inter"]),
                                   fixed_terms = list(lambda=obs.R2_Cd_w0_sr5$lambda),
                                   # no standard errors
                                    bootstrap_samples = bootN)
 
 
 #' 
-#' ### Saving parameters and errors
+### Storing parameter estimates (mean, lower and upper)---------------------------
 #' Storing the parameter estimates and the lower and upper bounds in a data frame so we can use it later.
-## ---------------------------
+#### Mean estimates ------
 # creating data frame where to store the data
+    
+print("Creating data frame to store mean parameter estimates for the cadmium environment")
   cxr_param_w0C<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Replicate=c(1,2,3,4,5), Environment=c("Cd"))
   cxr_param_w0C$Tu_lambda<-0
   cxr_param_w0C$Te_lambda<-0
@@ -979,8 +1017,10 @@ obs.R2_Cd_w0_sr1<-cxr_pm_fit(data = Rep_R2_Cd[[1]],
 #' 
 #' #### Data frame with lower estimates
 #' 
-## ---------------------------
+#### Lower estimates ---------------------------
 ### Here we will apply the same reasoning but now estimating the lower estimates, using the stats from cxr. Lower bounds correspond to mean-error.
+  
+  print("Creating data frame to store lower parameter estimates for the cadmium environment")
   cxr_param_w0C_lower<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Replicate=c(1,2,3,4,5), Environment=c("Cd"))
   cxr_param_w0C_lower$Tu_lambda<-0
   cxr_param_w0C_lower$Te_lambda<-0
@@ -1043,8 +1083,9 @@ obs.R2_Cd_w0_sr1<-cxr_pm_fit(data = Rep_R2_Cd[[1]],
 #' 
 #' #### Data frame with upper estimates
 #' 
-## ---------------------------
+#### Upper estimates ---------------------------
 ### Here we will apply the same reasoning but now estimating the upper estimates, using the stats from cxr. Upper bounds correspond to mean-error.
+print("Creating data frame to store upper parameter estimates for the cadmium environment")
   cxr_param_w0C_upper<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Replicate=c(1,2,3,4,5), Environment=c("Cd"))
   cxr_param_w0C_upper$Tu_lambda<-0
   cxr_param_w0C_upper$Te_lambda<-0
@@ -1107,39 +1148,47 @@ obs.R2_Cd_w0_sr1<-cxr_pm_fit(data = Rep_R2_Cd[[1]],
 
 #' 
 #' 
-#' ### Saving pooled parameter estimates 
+### Saving pooled parameter estimates ---------------------------
 #' intermediate files in case something goes wrong
-## ---------------------------
+## 
 ## Save the objects
-save(obs.R1_Cd_w0,file= "../Analyses_restart/cxr_normal_allEqual/cxr_R1_Cd.RData")
-save(obs.R3_Cd_w0, file="../Analyses_restart/cxr_normal_allEqual/cxr_R3_Cd.RData")
-save(obs.R4_Cd_w0, file="../Analyses_restart/cxr_normal_allEqual/cxr_R4_Cd.RData")
-save(obs.R5_Cd_w0, file="../Analyses_restart/cxr_normal_allEqual/cxr_R5_Cd.RData")
-save(obs.R2_Cd_w0_sr1, file="../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR1_Cd.RData")
-save(obs.R2_Cd_w0_sr4,file= "../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR4_Cd.RData")
-save(obs.R2_Cd_w0_sr5, file="../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR5_Cd.RData")
-save(obs.R2_Cd_w0_sr4_inter, file="../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR4_inter_Cd.RData")
-save(obs.R2_Cd_w0_sr5_inter, file="../Analyses_restart/cxr_normal_allEqual/cxr_R2_SR5_inter_Cd.RData")
+save(obs.R1_Cd_w0,file= "./Analyses/cxr_normal_Replicates/cxr_R1_Cd.RData")
+save(obs.R3_Cd_w0, file="./Analyses/cxr_normal_Replicates/cxr_R3_Cd.RData")
+save(obs.R4_Cd_w0, file="./Analyses/cxr_normal_Replicates/cxr_R4_Cd.RData")
+save(obs.R5_Cd_w0, file="./Analyses/cxr_normal_Replicates/cxr_R5_Cd.RData")
+save(obs.R2_Cd_w0_sr1, file="./Analyses/cxr_normal_Replicates/cxr_R2_SR1_Cd.RData")
+save(obs.R2_Cd_w0_sr4,file= "./Analyses/cxr_normal_Replicates/cxr_R2_SR4_Cd.RData")
+save(obs.R2_Cd_w0_sr5, file="./Analyses/cxr_normal_Replicates/cxr_R2_SR5_Cd.RData")
+save(obs.R2_Cd_w0_sr4_inter, file="./Analyses/cxr_normal_Replicates/cxr_R2_SR4_inter_Cd.RData")
+save(obs.R2_Cd_w0_sr5_inter, file="./Analyses/cxr_normal_Replicates/cxr_R2_SR5_inter_Cd.RData")
 
 #' 
 #' 
-## ---------------------------
-write.csv(cxr_param_w0C, file = "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_Cd.csv")
-  write.csv(cxr_param_w0C_upper, file = "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper_Cd.csv")
-  write.csv(cxr_param_w0C_lower, file = "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_lower_Cd.csv")
+##Save parameter estimates ---------------------------
 
+# Mean estimates
+write.csv(cxr_param_w0C, file = "./Analyses/cxr_normal_Replicates/parameters_cxr_normal_Cd.csv")
+# Upper estimates
+  write.csv(cxr_param_w0C_upper, file = "./Analyses/cxr_normal_Replicates/parameters_cxr_normal_upper_Cd.csv")
 
+# Lower estimates
+  write.csv(cxr_param_w0C_lower, file = "./Analyses/cxr_normal_Replicates/parameters_cxr_normal_lower_Cd.csv")
+
+print("Joining data frames")
 #' 
-#' # Joining data frames
-#' These are the final files that are then used for the rest of the analyses
-## ---------------------------
+# Joining data frames---------------------------
+
+## 
 param_all_w0<-as.data.frame(rbind(cxr_param_w0, cxr_param_w0C))
 
 param_all_w0_lower<-as.data.frame(rbind(cxr_param_w0_lower, cxr_param_w0C_lower))
 param_all_w0_upper<-as.data.frame(rbind(cxr_param_w0_upper, cxr_param_w0C_upper))
-  
-  write.csv(param_all_w0, "../Analyses/cxr_normal_allEqual/parameters_cxr_normal.csv")
-  write.csv(param_all_w0_upper, "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper.csv")
-  write.csv(param_all_w0_lower, "../Analyses_restart/cxr_normal_allEqual/parameters_cxr_normal_lower.csv")
+
+print("Saving files")
+# Save files--------------------------- 
+#' These are the final files that are then used for the rest of the analyses
+  write.csv(param_all_w0, "./Analyses/cxr_normal_Replicates/parameters_cxr_normal.csv")
+  write.csv(param_all_w0_upper, "./Analyses/cxr_normal_Replicates/parameters_cxr_normal_upper.csv")
+  write.csv(param_all_w0_lower, "./Analyses/cxr_normal_Replicates/parameters_cxr_normal_lower.csv")
 
 #' 

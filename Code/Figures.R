@@ -1,29 +1,64 @@
-#' ---
-#' title: "R Notebook"
-#' output:
-#'   html_document:
-#'     df_print: paged
-#' ---
-## ---------------------------
 rm(list=ls())
+# Note the script should be run from the main directory of the repository.
+
+# Checking if we are inside the correct folder, otherwise changing directory to the previous folder
+file_exists<-"Session_Info"
+
+if(file.exists(file_exists)){
+  setwd("../")
+  if(!file.exists("Code")){
+    print("Please ensure that the script is run from the main repository folder")
+  }
+}else{
+  if(!file.exists("Code")){
+    print("Please ensure that the script is run from the main repository folder")
+  }
+}
+
+# Functions and libraries ---------------------------
+if(!require("tidyverse")){
+  install.packages("tidyverse")
+}
+if(!require("plyr")){
+  install.packages("plyr")
+}
+if(!require("dplyr")){
+  install.packages("dplyr")
+}
+if(!require("tidyr")){
+  install.packages("tidyr")
+}
+if(!require("ggeffects")){
+  install.packages("effects")
+}
+if(!require("cowplot")){
+  install.packages("cowplot")
+}
+if(!require("grid")){
+  install.packages("grid")
+}
+if(!require("gridExtra")){
+  install.packages("gridExtra")
+}
+if(!require("RColorBrewer")){
+  install.packages("RColorBrewer")
+}
+if(!require("ggtext")){
+  install.packages("ggtext")
+}
+if(!require("ggbreak")){
+  install.packages("ggtext")
+}
 
 library(tidyverse)
 library(plyr)
 library(dplyr)
-library(car)
-library(fitdistrplus)
 library(tidyr)
 library(ggtext)
-library(lme4)
-library(lmerTest)
-library(emmeans)
-library(glmmTMB)
 library(ggbreak)
-library(effects)
 library(cowplot)
 library(ggeffects)
-library(marginaleffects)
-library(ggtext)
+library(grid)
 library(gridExtra)
 library(RColorBrewer)
 
@@ -45,7 +80,10 @@ names(regimeTe)<-c("SR4", "SR5")
 
 colors_comb<-brewer.pal(name = "Spectral", 4)
 
-dir.create("../Plots")
+if(!dir.exists("./Plots")){
+  dir.create("./Plots")
+  
+}
 
 #' 
 #' # Figures
@@ -58,20 +96,22 @@ dir.create("../Plots")
 #' 
 #' ### Importing data
 #' Importing the data to get the parameter estimates for pooled data
-## ---------------------------
-param_all_REP<-read.csv("../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_best.csv")
-param_all_REP_upper<-read.csv("../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_upper_best.csv")
-param_all_REP_lower<-read.csv( "../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_lower_best.csv")
+#  Figure 1---------------------------
+
+## Importing pooled data -----------
+param_all_REP<-read.csv("./Analyses/cxr_normal_Pooled/parameters_cxr_normal_Pooled.csv")
+param_all_REP_upper<-read.csv("./Analyses/cxr_normal_Pooled/parameters_cxr_normal_Pooled_upper.csv")
+param_all_REP_lower<-read.csv( "./Analyses/cxr_normal_Pooled/parameters_cxr_normal_Pooled_lower.csv")
 param_all_REP<-param_all_REP[,-1]
 param_all_REP_upper<-param_all_REP_upper[,-1]
 param_all_REP_lower<-param_all_REP_lower[,-1]
 
 #' 
 #' Importing the data to get the parameter estimates for each replicate
-## ---------------------------
-param_all_w0<-read.csv("../Analyses/cxr_normal_allEqual/parameters_cxr_normal_new.csv")
-param_all_w0_upper<-read.csv("../Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper_new.csv")
-param_all_w0_lower<-read.csv( "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_lower_new.csv")
+## Importing replicate data -----------
+param_all_w0<-read.csv("./Analyses/cxr_normal_Replicates/parameters_cxr_normal.csv")
+param_all_w0_upper<-read.csv("./Analyses/cxr_normal_Replicates/parameters_cxr_normal_upper.csv")
+param_all_w0_lower<-read.csv( "./Analyses/cxr_normal_Replicates/parameters_cxr_normal_lower.csv")
 
 param_all_w0<-param_all_w0[,-1]
 param_all_w0_upper<-param_all_w0_upper[,-1]
@@ -82,10 +122,11 @@ param_all_w0_lower<-param_all_w0_lower[,-1]
 #' Using the parameter estimates we will predict the number offspring produced by 10 females when considering only the effect of growth rate, growth rate + intraspecific competition, growth rate + intra and interspecific competition.
 #' We will use the same approach for each of the two species and for upper and lower bounds.
 #' 
-## ---------------------------
+## Simulations ---------------------------
 # create the data frame to store the data
 pred_coex1Gen<-as.data.frame(expand_grid(Te=c("SR4","SR5"), Tu=c("SR1", "SR2"), Environment= c("N", "Cd")))
 
+### Predict mean number of offspring ------
 # Loop to create the prediction for the number of offspring for TU considering only growth rate
 pred_coex1Gen$predTu_onlyLambda<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
   # subset the data frame corresponding to the regimes 
@@ -150,7 +191,7 @@ pred_coex1Gen$predTe_ALL<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
 #' ### Predictions of offspring number considering lower estimates
 #' Here we have the same approach but using the lower bounds.
 #' 
-## ---------------------------
+### Predict lower boundaries ---------------------------
 # Loop to create the prediction for the number of offspring for TU considering only growth rate
 pred_coex1Gen$predTu_onlyLambda_L<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
   aux_alphas<-subset(param_all_REP_lower, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
@@ -210,7 +251,7 @@ pred_coex1Gen$predTe_ALL_L<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
 #' ###Predictions of offspring number considering upper estimates
 #' Here we have the same approach but using the lower bounds.
 #' 
-## ---------------------------
+### Predict upper boundaries ---------------------------
 # Loop to create the prediction for the number of offspring for TU considering only growth rate
 pred_coex1Gen$predTu_onlyLambda_U<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
   aux_alphas<-subset(param_all_REP_upper, Tu_Regime==as.character(pred_coex1Gen$Tu[x]) & Te_Regime==as.character(pred_coex1Gen$Te[x]) & Environment==as.character(pred_coex1Gen$Environment[x]))
@@ -271,7 +312,7 @@ pred_coex1Gen$predTe_ALL_U<-sapply(c(1:length(pred_coex1Gen$Tu)), function(x){
 #' #### Reshaping the data frame
 #' This is to make it easier to plot the predictions
 #' 
-## ---------------------------
+### Reshapping data for plotting---------------------------
 str(pred_coex1Gen)
 # reshaping data of the mean estimates
 pred_coex1Gen_long<-gather(pred_coex1Gen[,c("Te","Tu","Environment",  "predTe_onlyLambda","predTe_Lambda_INTRA" ,"predTe_ALL" ,"predTu_onlyLambda","predTu_Lambda_INTRA","predTu_ALL" )], parameter, value, c( "predTe_onlyLambda","predTe_Lambda_INTRA" ,"predTe_ALL" ,"predTu_onlyLambda","predTu_Lambda_INTRA","predTu_ALL" ))
@@ -307,9 +348,10 @@ pred_coex1Gen_long$parameter3<-factor(pred_coex1Gen_long$parameter, c("predTe_on
 #' ## Plotting
 #' 
 #' Plot with predictions of the number of offspring produced by Te and Tu when considering different levels competition (no competition - only lambda, only intraspecific competition - lambda_Intra, intra and interspecific competition - ALL)
-## ---------------------------
+## Plot ---------------------------
+
 # This is for T. evansi
-ggplot(subset(pred_coex1Gen_long, parameter=="predTe_onlyLambda" |  parameter=="predTe_Lambda_INTRA" |  parameter=="predTe_ALL"), aes(y=parameter3, x=value))+
+plotA<-ggplot(subset(pred_coex1Gen_long, parameter=="predTe_onlyLambda" |  parameter=="predTe_Lambda_INTRA" |  parameter=="predTe_ALL"), aes(y=parameter3, x=value))+
   facet_grid(.~Environment, labeller=labeller(Environment=Env))+
   geom_errorbarh(aes(xmin=value_L, xmax=value_U, group=interaction(Te, Tu)), colour="black", height=0.5, position=position_dodge2(0.5))+
   geom_point(aes(fill=interaction(Te, Tu)),size=2.5, position=position_dodge2(0.5), stat="identity", shape=21)+
@@ -322,13 +364,15 @@ ggplot(subset(pred_coex1Gen_long, parameter=="predTe_onlyLambda" |  parameter=="
   scale_y_discrete(labels=c(expression(lambda+ alpha[ii] + alpha [ij]),expression(lambda+ alpha[ii]), expression(lambda)), limits=rev(levels(droplevels(subset(pred_coex1Gen_long, parameter=="predTe_onlyLambda" |  parameter=="predTe_Lambda_INTRA" |  parameter=="predTe_ALL"))$parameter3)))+
   theme(legend.position = "bottom", axis.text = element_text(size=12), axis.title = element_text(face="plain", size=12))+
   ylab("")
- save_plot("../Plots/Fig1A.pdf", width=17.5, height=10)
+
+plotA
+ save_plot("./Plots/Fig1A.pdf", width=17.5, height=10)
 
 #' 
 #' 
-## ---------------------------
+
 # This is for T. urticae
-ggplot(subset(pred_coex1Gen_long, parameter=="predTu_onlyLambda" |  parameter=="predTu_Lambda_INTRA" |  parameter=="predTu_ALL"), aes(y=parameter3, x=value))+
+plotB<-ggplot(subset(pred_coex1Gen_long, parameter=="predTu_onlyLambda" |  parameter=="predTu_Lambda_INTRA" |  parameter=="predTu_ALL"), aes(y=parameter3, x=value))+
   facet_grid(.~Environment, labeller=labeller(Environment=Env))+
   geom_errorbarh(aes(xmin=value_L, xmax=value_U, group=interaction(Te, Tu)), colour="black", height=0.5, position=position_dodge2(0.5))+
   geom_point(aes(fill=interaction(Te, Tu)),size=2.5, position=position_dodge2(0.5), stat="identity", shape=21)+
@@ -341,22 +385,30 @@ ggplot(subset(pred_coex1Gen_long, parameter=="predTu_onlyLambda" |  parameter=="
   scale_y_discrete(labels=c(expression(lambda+ alpha[ii] + alpha [ij]),expression(lambda+ alpha[ii]), expression(lambda)), limits=rev(levels(droplevels(subset(pred_coex1Gen_long, parameter=="predTu_onlyLambda" |  parameter=="predTu_Lambda_INTRA" |  parameter=="predTu_ALL"))$parameter3)))+
   theme(legend.position = "bottom", axis.text = element_text(size=12), axis.title = element_text(face="plain", size=12))+
   ylab("")
-save_plot("../Plots/Fig1B.pdf", width=17.5, height=10)
 
+plotB
+save_plot("./Plots/Fig1B.pdf", width=17.5, height=10)
+
+
+plot_grid((plotA+ theme(legend.position="none")), plotB, nrow=2, labels=c("A", "B"), rel_heights = c(0.45, 0.55))
+
+save_plot("./Plots/Fig1.pdf", width=20, height=20)
+
+save_plot("./Plots/Fig1.png", width=20, height=20)
 
 #' # Figure 2
 #' 
 #' ### Importing parameters
 #' 
-## ---------------------------
-# Importing parameters
-test_struct<-read.csv("../Analyses/structural_REP_new.csv")
+# Figure 2 ---------------------------
+### Importing parameters -----
+test_struct<-read.csv("./Analyses/structural_Pooled.csv")
 # removing the first column
 test_struct<-test_struct[,-1]
 
 
 #' 
-## ---------------------------
+## Set up data structure ---------------------------
 # Since we are only focusing on positive growth rates, we transform all the negative slopes that would go to y <0 into 0 and all negative slopes that would go to x<0 into 90
 test_struct[which(test_struct$a21_a11<0),"a21_a11"]<-0
 test_struct[which(test_struct$a21_a11_lower<0),"a21_a11_lower"]<-0
@@ -414,7 +466,7 @@ CI_rep2<-as.data.frame(cbind(CI_rep2, aux_CI2))
 #' 
 #' #### no cadmium
 #' 
-## ---------------------------
+## Plot ---------------------------
 normal_feas<-ggplot(subset(test_struct, Environment=="N"), aes(x=Tu_lambda, y=Te_lambda, colour=interaction(Tu_Regime, Te_Regime)))+
   facet_grid(Tu_Regime~ Te_Regime, labeller=labeller(Tu_Regime=regimeTu, Te_Regime=regimeTe) )+
   geom_polygon(data=subset(CI_rep2,Environment=="N"),aes(x=x_upper, y=y_upper), fill="#FADADD",  linewidth=0.85, colour=NA)+
@@ -435,11 +487,11 @@ normal_feas<-ggplot(subset(test_struct, Environment=="N"), aes(x=Tu_lambda, y=Te
   coord_cartesian(xlim =c(0.01,4), ylim=c(0.01,8), expand = TRUE)+
   ggtitle("No cadmium environment")
 normal_feas
-save_plot("../Plots/Fig2B_B.pdf", width=20, height=15)
+save_plot("./Plots/Fig2B_B.pdf", width=20, height=15)
 
 #' 
 #' #### cadmium
-## ---------------------------
+
 cadmium_feas<-ggplot(subset(test_struct, Environment=="Cd"), aes(x=Tu_lambda, y=Te_lambda, colour=interaction(Tu_Regime, Te_Regime)))+
   facet_grid(Tu_Regime~ Te_Regime, labeller=labeller(Tu_Regime=regimeTu, Te_Regime=regimeTe) )+
   geom_polygon(data=subset(CI_rep2,Environment=="Cd"),aes(x=x_lower, y=y_lower), fill="#FADADD",linewidth=0.85, colour=NA)+
@@ -460,29 +512,29 @@ cadmium_feas<-ggplot(subset(test_struct, Environment=="Cd"), aes(x=Tu_lambda, y=
   ggtitle("Cadmium environment")
 
 cadmium_feas
-save_plot("../Plots/Fig2A_B.pdf", width=20, height=15)
+save_plot("./Plots/Fig2A_B.pdf", width=20, height=15)
 
 #' 
 #' #### both together
-## ---------------------------
+
 # joining the two plots
 plot_grid(cadmium_feas, normal_feas, ncol=2, labels=c("A", "B") )
 # save plots
-save_plot("../Plots/Fig2.pdf", width=30, height=15)
-save_plot("../Plots/Fig2.tiff", width=30, height=15)
+save_plot("./Plots/Fig2.pdf", width=30, height=15)
+save_plot("./Plots/Fig2.tiff", width=30, height=15)
 
 #' 
 #' # Figure 3
 #' 
 #' ### Importing parameters
 #' 
-## ---------------------------
-struct_mat_REP_final2<-read.csv("../Analyses/min_distance_pooled.csv", header=TRUE)
-struct_mat_w0_final<-read.csv("../Analyses/min_distance_per_replicate.csv", header=TRUE)
+# Figure 3 ---------------------------
+struct_mat_REP_final2<-read.csv("./Analyses/min_distance_pooled.csv", header=TRUE)
+struct_mat_w0_final<-read.csv("./Analyses/min_distance_per_replicate.csv", header=TRUE)
 
 
 #' 
-## ---------------------------
+## Plot ---------------------------
 ggplot(struct_mat_w0_final, aes(x=interaction(Te_Regime, Tu_Regime), y=minDistance, fill=interaction(Te_Regime, Tu_Regime)))+
   facet_grid(.~Environment, labeller=labeller(Environment=Env))+
   geom_hline(yintercept = 0, colour="lightgrey", linetype="dashed")+
@@ -500,22 +552,24 @@ ggplot(struct_mat_w0_final, aes(x=interaction(Te_Regime, Tu_Regime), y=minDistan
   guides(fill=guide_legend(nrow=2))+
   xlab("Selection Regimes")+
   theme(legend.position = "bottom", strip.background =element_rect(colour="white"), panel.border = element_rect(colour="black"), axis.text.x = element_text(size=10, angle = 45, vjust = 0.63), axis.title = element_text(size=10, face="bold"), strip.text = element_text(size=10), axis.text.y = element_text(size=10))
-save_plot("../Plots/Fig3.pdf", width=15, height=10)
-save_plot("../Plots/Fig3.png", width=15, height=10)
+save_plot("./Plots/Fig3.pdf", width=15, height=10)
+save_plot("./Plots/Fig3.png", width=15, height=10)
 
 #' 
 #' # Figure 4
 #' 
 #' ### Importing data
 #' 
-## ---------------------------
-sum_observed_coex_rep<-read.csv(file="../Analyses/popDyn_pooledData.csv", header=TRUE)
+# Figure 4 ---------------------------
 
-sum_observed_coex_ALL2<-read.csv(file="../Analyses/popDyn_replicates.csv", header=TRUE)
+## Importing data ------
+sum_observed_coex_rep<-read.csv(file="./Analyses/popDyn_pooledData.csv", header=TRUE)
+
+sum_observed_coex_ALL2<-read.csv(file="./Analyses/popDyn_replicates.csv", header=TRUE)
 
 #' 
 #' ### slopes and figure
-## ---------------------------
+## Slopes ---------------------------
 # This is from the summary of the model so we can put the correct slope and CI in the plot, and not ggplot's model
 slope_all<-log(1.91) #slope m7 obtained from emmeans
 slope_ci_L<-log(1.91 - 0.156) 
@@ -526,52 +580,53 @@ slopes_data<-data.frame(x=seq(0,1, 0.05))
 slopes_data$ymin<-slope_ci_L*slopes_data$x
 slopes_data$ymax<-slope_ci_U*slopes_data$x
 
-# Figure
+## Plot ---------------------------
 ggplot(sum_observed_coex_ALL2)+
   geom_abline(intercept=0, slope=1, color="black", linewidth=0.75, linetype="dashed")+
   geom_abline(intercept = 0, slope=slope_all)+
   geom_abline(intercept = 0, slope=slope_ci_L, colour="grey",linewidth=0.75)+
   geom_abline(intercept = 0, slope=slope_ci_U,  colour="grey",linewidth=0.75)+
   geom_ribbon(data=slopes_data, aes(ymin=ymin,ymax=ymax, x=x), fill="grey", alpha=0.5) +
-  geom_errorbar(data=sum_observed_coex_ALL2,aes(x=meanRatio,y=mean_pred,ymin=mean_pred-sdPred, ymax=mean_pred+sdPred), width=0.01, colour="black")+
-  geom_errorbarh(data=sum_observed_coex_ALL2,aes(y=mean_pred, xmin=meanRatio-sdRatio, xmax=meanRatio+sdRatio), height=0.01, colour="black")+
-  geom_point(size=3, aes(x=meanRatio,y=mean_pred,fill=interaction(SRTu, SRTe), shape=Env))+
+  geom_errorbar(data=sum_observed_coex_ALL2,aes(x=meanRatio,y=mean_pred,ymin=mean_pred-sdPred, ymax=mean_pred+sdPred), width=0.009, colour="black")+
+  geom_errorbarh(data=sum_observed_coex_ALL2,aes(y=mean_pred, xmin=meanRatio-sdRatio, xmax=meanRatio+sdRatio), height=0.009, colour="black")+
+  geom_point(size=2.3, aes(x=meanRatio,y=mean_pred,fill=interaction(SRTu, SRTe), shape=Env))+
   scale_fill_manual(values=c("#D7191C", "#FDAE61" ,"#ABDDA4", "#2B83BA"), labels=c("Te no cadmium:Tu no cadmium", "Te cadmium: Tu no cadmium", "Te no cadmium: Tu cadmium", "Te cadmium: Tu cadmium"))+
   scale_shape_manual(values=c(22,23))+
   theme_plots+
   xlab("Observed ratio")+
   ylab("Predicted ratio")+
-  ylim(c(-2,2))+
-  xlim(c(-2,2))+
+  ylim(c(-0.1,1.2))+
+  xlim(c(0,1.2))+
   theme(legend.position = "none")+
-  coord_cartesian(xlim=c(0.3,0.96), ylim=c(0.3, 0.96))
+  coord_cartesian(xlim=c(0.25,0.97), ylim=c(0.25, 0.97))
 
-save_plot("../Plots/Fig4.pdf", width=10, height=10)
+save_plot("./Plots/Fig4.pdf", width=15, height=15)
 
-save_plot("../Plots/Fig4.png", width=15, height=12)
+save_plot("./Plots/Fig4.png", width=20, height=20)
 
 
 #' 
-#' # Supplementary figures
+# Supplementary figures-------
 #' 
-#' ## Figures S3 - S8
+## Figures S3 - S8
 #' 
+# Figure S3 to S8 ------
 #' ### Importing data
 #' Importing the data to get the parameter estimates for pooled data
-## ---------------------------
-param_all_REP<-read.csv("../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_best.csv")
-param_all_REP_upper<-read.csv("../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_upper_best.csv")
-param_all_REP_lower<-read.csv( "../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_lower_best.csv")
+### Importing data---------------------------
+param_all_REP<-read.csv("./Analyses/cxr_normal_Pooled/parameters_cxr_normal_Pooled.csv")
+param_all_REP_upper<-read.csv("./Analyses/cxr_normal_Pooled/parameters_cxr_normal_Pooled_upper.csv")
+param_all_REP_lower<-read.csv( "./Analyses/cxr_normal_Pooled/parameters_cxr_normal_Pooled_lower.csv")
 param_all_REP<-param_all_REP[,-1]
 param_all_REP_upper<-param_all_REP_upper[,-1]
 param_all_REP_lower<-param_all_REP_lower[,-1]
 
 #' 
 #' Importing the data to get the parameter estimates for each replicate
-## ---------------------------
-param_all_w0<-read.csv("../Analyses/cxr_normal_allEqual/parameters_cxr_normal_new.csv")
-param_all_w0_upper<-read.csv("../Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper_new.csv")
-param_all_w0_lower<-read.csv( "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_lower_new.csv")
+
+param_all_w0<-read.csv("./Analyses/cxr_normal_Replicates/parameters_cxr_normal.csv")
+param_all_w0_upper<-read.csv("./Analyses/cxr_normal_Replicates/parameters_cxr_normal_upper.csv")
+param_all_w0_lower<-read.csv( "./Analyses/cxr_normal_Replicates/parameters_cxr_normal_lower.csv")
 
 param_all_w0<-param_all_w0[,-1]
 param_all_w0_upper<-param_all_w0_upper[,-1]
@@ -579,7 +634,7 @@ param_all_w0_lower<-param_all_w0_lower[,-1]
 
 #' 
 #' ### Data wrangling pooled data
-## ---------------------------
+### Data wrangling ---------------------------
 param_all_REP_long<-gather(param_all_REP, parameter, value,Tu_lambda:Te_inter )
 
 param_all_REP_long$category<-mapvalues(param_all_REP_long$parameter, c("Tu_lambda", "Te_lambda", "Tu_intra", "Te_intra","Tu_inter", "Te_inter"), c("lambda", "lambda", "intra", "intra", "inter", "inter"))
@@ -603,8 +658,6 @@ colnames(param_all_REP_long)[7:8]<-c("lower","upper")
 
 #' 
 #' ### Data wrangling replicate data
-## ---------------------------
-# data wrangling
 
 param_all_w0_long<-gather(param_all_w0, parameter, value,Tu_lambda:Te_inter )
 
@@ -630,10 +683,10 @@ str(param_all_w0_long)
 
 #' 
 #' ## Cadmium env
+### Cadmium environment ---------------------------
 #' 
 #' #### Growth rate
 #' 
-## ---------------------------
 ### Tu
 Tu_gr_ev<-ggplot(data=subset(param_all_REP_long, (parameter=="Tu_lambda" & Te_Regime=="SR4" & Environment=="Cd")), aes(fill=Tu_Regime, y=value, x=Tu_Regime))+
   geom_hline(yintercept = 1, colour="lightgray", linetype="dashed")+
@@ -662,7 +715,6 @@ Te_gr_ev<-ggplot(data=subset(param_all_REP_long, (parameter=="Te_lambda" & Tu_Re
 
 #' 
 #' #### Intraspecific
-## ---------------------------
 ### Tu
 Tu_intra_ev<-ggplot(data=subset(param_all_REP_long, (parameter=="Tu_intra" & Te_Regime=="SR4" & Environment=="Cd")), aes(fill=Tu_Regime, y=value, x=Tu_Regime))+
   geom_hline(yintercept = 0, colour="lightgray", linetype="dashed")+
@@ -694,7 +746,6 @@ Te_intra_ev<-ggplot(data=subset(param_all_REP_long, (parameter=="Te_intra" & Tu_
 
 #' 
 #' #### Interspecific
-## ---------------------------
 Tu_inter_ev<-ggplot(data=subset(param_all_REP_long, (parameter=="Tu_inter" & Environment=="Cd")), aes(fill=interaction(Te_Regime,Tu_Regime), y=value, x=Tu_Regime))+
   geom_hline(yintercept = 0, colour="lightgray", linetype="dashed")+
   geom_errorbar(data=subset(param_all_w0_long, (parameter=="Tu_inter" & Environment=="Cd")), aes(y=value, x=Tu_Regime, ymin=lower, ymax=upper), position=position_dodge2(width=0.3), colour="grey", width=0.3)+
@@ -728,27 +779,26 @@ Te_inter_ev<-ggplot(data=subset(param_all_REP_long, (parameter=="Te_inter" & Env
 
 #' 
 #' ### Plotting
-## ---------------------------
+## Plot---------------------------
 plot_grid(Te_gr_ev, Tu_gr_ev, labels=c("A", "B"))
 
-save_plot("../Plots/FigS7.pdf", width=30, height=15)
-save_plot("../Plots/FigS7.png", width=30, height=15)
+save_plot("./Plots/FigS7.pdf", width=30, height=15)
+save_plot("./Plots/FigS7.png", width=30, height=15)
 
 plot_grid(Te_intra_ev, Tu_intra_ev, labels=c("A", "B"))
 
-save_plot("../Plots/FigS3.pdf", width=30, height=15)
-save_plot("../Plots/FigS3.png", width=30, height=15)
+save_plot("./Plots/FigS3.pdf", width=30, height=15)
+save_plot("./Plots/FigS3.png", width=30, height=15)
 
 plot_grid(Te_inter_ev, Tu_inter_ev, labels=c("A", "B"))
 
-save_plot("../Plots/FigS4.pdf", width=30, height=15)
-save_plot("../Plots/FigS4.png", width=30, height=15)
+save_plot("./Plots/FigS4.pdf", width=30, height=15)
+save_plot("./Plots/FigS4.png", width=30, height=15)
 
 #' 
 #' ## Ancestral env
-#' 
+### No cadmium environment ---------------------------
 #' #### Growth rate
-## ---------------------------
 #Tu
 Tu_gr_ev_N<-ggplot(data=subset(param_all_REP_long, (parameter=="Tu_lambda" & Te_Regime=="SR4" & Environment=="N")), aes(fill=Tu_Regime, y=value, x=Tu_Regime))+
   geom_hline(yintercept = 1, colour="lightgray", linetype="dashed")+
@@ -782,7 +832,6 @@ Te_gr_ev_N<-ggplot(data=subset(param_all_REP_long, (parameter=="Te_lambda" & Tu_
 #' 
 #' #### Intraspecific competition
 #' 
-## ---------------------------
 #Tu
 Tu_intra_ev_N<-ggplot(data=subset(param_all_REP_long, (parameter=="Tu_intra" & Te_Regime=="SR4" & Environment=="N")), aes(fill=Tu_Regime, y=value, x=Tu_Regime))+
   geom_hline(yintercept = 0, colour="lightgray", linetype="dashed")+
@@ -813,7 +862,7 @@ Te_intra_ev_N<-ggplot(data=subset(param_all_REP_long, (parameter=="Te_intra" & T
 
 #' 
 #' #### Interspecific competition
-## ---------------------------
+# Tu
 Tu_inter_ev_N<-ggplot(data=subset(param_all_REP_long, (parameter=="Tu_inter" & Environment=="N")), aes(fill=interaction(Te_Regime,Tu_Regime), y=value, x=Tu_Regime))+
   geom_hline(yintercept = 0, colour="lightgray", linetype="dashed")+
   geom_errorbar(data=subset(param_all_w0_long, (parameter=="Tu_inter" & Environment=="N")), aes(y=value, x=Tu_Regime, ymin=lower, ymax=upper), position=position_dodge2(width=0.3), colour="grey", width=0.3)+
@@ -846,34 +895,34 @@ Te_inter_ev_N<-ggplot(data=subset(param_all_REP_long, (parameter=="Te_inter" & E
 
 #' 
 #' ### Plotting
-## ---------------------------
+## Plot---------------------------
 plot_grid(Te_gr_ev_N, Tu_gr_ev_N, labels=c("A", "B"))
 
-save_plot("../Plots/FigS8.pdf", width=30, height=15)
-save_plot("../Plots/FigS8.png", width=30, height=15)
+save_plot("./Plots/FigS8.pdf", width=30, height=15)
+save_plot("./Plots/FigS8.png", width=30, height=15)
 
 plot_grid(Te_intra_ev_N, Tu_intra_ev_N, labels=c("A", "B"))
 
-save_plot("../Plots/FigS5.pdf", width=30, height=15)
-save_plot("../Plots/FigS5.png", width=30, height=15)
+save_plot("./Plots/FigS5.pdf", width=30, height=15)
+save_plot("./Plots/FigS5.png", width=30, height=15)
 
 plot_grid(Te_inter_ev_N, Tu_inter_ev_N, labels=c("A", "B"))
 
-save_plot("../Plots/FigS6.pdf", width=30, height=15)
-save_plot("../Plots/FigS6.png", width=30, height=15)
+save_plot("./Plots/FigS6.pdf", width=30, height=15)
+save_plot("./Plots/FigS6.png", width=30, height=15)
 
 #' 
-#' ### Figure S9
+# Figure S9------
 #' 
 #' ### Importing parameters
 #' 
-## ---------------------------
-struct_mat_REP_final2<-read.csv("../Analyses/min_distance_pooled.csv")
-struct_mat_w0_final<-read.csv("../Analyses/min_distance_per_replicate.csv")
+## Importing parameters ---------------------------
+struct_mat_REP_final2<-read.csv("./Analyses/min_distance_pooled.csv")
+struct_mat_w0_final<-read.csv("./Analyses/min_distance_per_replicate.csv")
 
 
 #' 
-## ---------------------------
+## Plot ---------------------------
 # first part of the plot
 ggplot_distTe<-ggplot(struct_mat_REP_final2, aes(x=interaction(Tu_Regime, Te_Regime), fill=interaction(Tu_Regime, Te_Regime)))+
   facet_grid(Environment~., labeller=labeller(Environment=Env))+
@@ -897,7 +946,6 @@ ggplot_distTe
 
 #' 
 #' 
-## ---------------------------
 # first part of the plot
 ggplot_distTu<-ggplot(struct_mat_REP_final2, aes(x=interaction(Tu_Regime, Te_Regime), fill=interaction(Tu_Regime, Te_Regime)))+
   facet_grid(Environment~., labeller=labeller(Environment=Env))+
@@ -920,11 +968,10 @@ ggplot_distTu<-ggplot_distTu+ geom_errorbar(data=struct_mat_REP_final2, aes(ymin
 ggplot_distTu
 
 #' 
-## ---------------------------
 # joining the two plots
 plot_grid(ggplot_distTe + theme(legend.position="none"),ggplot_distTu + theme(legend.position="none"), ncol=2, labels=c("A", "B") )
 
-save_plot("../Plots/FigS9.pdf", width=25, height=15)
-save_plot("../Plots/FigS9.png", width=25, height=15)
+save_plot("./Plots/FigS9.pdf", width=25, height=15)
+save_plot("./Plots/FigS9.png", width=25, height=15)
 
 #' 

@@ -4,12 +4,99 @@
 #'   html_document:
 #'     df_print: paged
 #' ---
-#' # Functions, general information and packages
-#' 
-## ---------------------------
 rm(list=ls())
+
+# Note the script should be run from the main directory of the repository.
+
+# Checking if we are inside the correct folder, otherwise changing directory to the previous folder
+file_exists<-"Session_Info"
+
+if(file.exists(file_exists)){
+  setwd("../")
+  if(!file.exists("Code")){
+    print("Please ensure that the script is run from the main repository folder")
+  }
+}else{
+  if(!file.exists("Code")){
+    print("Please ensure that the script is run from the main repository folder")
+  }
+}
+
+# Functions, general information and packages------------------------------------
+
+if(!require("plyr")){
+  install.packages("plyr")
+}
+if(!require("ggplot2")){
+  install.packages("ggplot2")
+}
+if(!require("dplyr")){
+  install.packages("dplyr")
+}
+if(!require("car")){
+  install.packages("car")
+}
+if(!require("fitdistrplus")){
+  install.packages("fitdistrplus")
+}
+if(!require("tidyr")){
+  install.packages("tidyr")
+}
+if(!require("cxr")){
+  install.packages("cxr")
+}
+if(!require("MASS")){
+  install.packages("MASS")
+}
+if(!require("mvtnorm")){
+  install.packages("mvtnorm")
+}
+if(!require("lme4")){
+  install.packages("lme4")
+}
+if(!require("lmerTest")){
+  install.packages("lmerTest")
+}
+if(!require("emmeans")){
+  install.packages("emmeans")
+}
+if(!require("glmmTMB")){
+  install.packages("glmmTMB")
+}
+if(!require("DescTools")){
+  install.packages("DescTools")
+}
+if(!require("performance")){
+  install.packages("performance")
+}
+if(!require("DHARMa")){
+  install.packages("DHARMa")
+}
+if(!require("effects")){
+  install.packages("effects")
+}
+if(!require("marginaleffects")){
+  install.packages("marginaleffects")
+}
+if(!require("LSAfun")){
+  install.packages("LSAfun")
+}
+if(!require("arm")){
+  install.packages("arm")
+}
+if(!require("cowplot")){
+  install.packages("cowplot")
+}
+if(!require("grid")){
+  install.packages("grid")
+}
+if(!require("gridExtra")){
+  install.packages("gridExtra")
+}
+
 library(plyr)
-library(tidyverse)
+library(dplyr)
+library(ggplot2)
 library(car)
 library(fitdistrplus)
 library(tidyr)
@@ -20,7 +107,6 @@ library(lme4)
 library(lmerTest)
 library(emmeans)
 library(glmmTMB)
-library(MASS)
 library(DescTools)
 library(performance)
 library(DHARMa)
@@ -31,12 +117,6 @@ library(arm)
 library(cowplot)
 library(grid)
 library(gridExtra)
-
-theme_plots<-theme(axis.text = element_text(size=14), axis.title = element_text(size=14, face="bold"), legend.text = element_text(size=12), strip.text = element_text(size=14), plot.title = element_text(size=14, face="bold"), panel.grid=element_line(colour="white"), panel.background = element_rect(fill="white") , axis.line = element_line(linewidth = 0.5, linetype = "solid",colour = "black"), strip.background = element_rect(fill="white"))
-
-save_plot<-function(dir, width=15, height=10, ...){
-  ggsave(dir, width = width, height = height, units = c("cm"))
-}
 
 # Creating vectors with regime names to use for plots
 regimeTu<-c("Tu \ncontrol", "Tu evolved \n in cadmium")
@@ -49,22 +129,40 @@ names(regimeTe)<-c("SR4", "SR5")
 #' # Evaluation
 #' Some pieces of the code take a lot of time to run. We provide the intermediate results to speed up the process. To run the whole code change eval from FALSE to TRUE.
 #' 
-## ---------------------------
-eval<-FALSE
+# Evaluation------------------------------------
+evaluation<-FALSE
+if(!file.exists("./Analyses")){
+  dir.create("./Analyses/")
+}
 
+#' 
+#' # Running cxr
+#' 
+#' This code takes a bit of time to run. So the intermediate files are provided in the Analyses folder.
+#' 
+#' To run the code to estimate the parameters with cxr use the scripts Running_cxr_PooledData.R (to obtain the estimates for pooled data) and Running_cxr_Replicates.R (to obtain the estimates for each replicate).
+#' 
+# Running cxr------------------------------------
+if(evaluation){
+  print("Running cxr")
+  source("./Code/Running_cxr_pooledData.R")
+  source("./Code/Running_cxr_Replicates.R")
+}
+
+print("Importing parameter estimation")
+#' 
 #' 
 #' # Importing parameter estimates
 #' 
-#' To run the code to estimate the parameters with cxr use the 
 #' 
 #' ### Estimated parameters per replicate
-## ---------------------------
+# Importing parameter estimates------------------------------------
 # Importing the mean parameters
-param_all_w0<-read.csv("../Analyses/cxr_normal_allEqual/parameters_cxr_normal_new.csv")
+param_all_w0<-read.csv("./Analyses/cxr_normal_Replicates/parameters_cxr_normal.csv")
 # Importing the upper values of the parameters
-param_all_w0_upper<-read.csv("../Analyses/cxr_normal_allEqual/parameters_cxr_normal_upper_new.csv")
+param_all_w0_upper<-read.csv("./Analyses/cxr_normal_Replicates/parameters_cxr_normal_upper.csv")
 # Importing the lower values of the parameters
-param_all_w0_lower<-read.csv( "../Analyses/cxr_normal_allEqual/parameters_cxr_normal_lower_new.csv")
+param_all_w0_lower<-read.csv( "./Analyses/cxr_normal_Replicates/parameters_cxr_normal_lower.csv")
 
 # Removing the first column
 param_all_w0<-param_all_w0[,-1]
@@ -73,23 +171,24 @@ param_all_w0_lower<-param_all_w0_lower[,-1]
 
 #' 
 #' ### Estimated parameters for pooled data
-## ---------------------------
+
 # Importing the mean parameters
-param_all_REP<-read.csv("../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_best.csv")
+param_all_REP<-read.csv("./Analyses/cxr_normal_Pooled/parameters_cxr_normal_Pooled.csv")
 # Importing the upper values of the parameters
-  param_all_REP_upper<-read.csv("../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_upper_best.csv")
+  param_all_REP_upper<-read.csv("./Analyses/cxr_normal_Pooled/parameters_cxr_normal_Pooled_upper.csv")
 # Importing the lower values of the parameters
-  param_all_REP_lower<-read.csv( "../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_lower_best.csv")
+  param_all_REP_lower<-read.csv( "./Analyses/cxr_normal_Pooled/parameters_cxr_normal_Pooled_lower.csv")
 
 param_all_REP<-param_all_REP[,-1]
 param_all_REP_upper<-param_all_REP_upper[,-1]
 param_all_REP_lower<-param_all_REP_lower[,-1]
 
+print("Statistical tests")
 #' 
 #' # Testing differences in estimated parameters
 #' 
 #' First thing is to test the distribution of each trait
-## ---------------------------
+# Statistical analyses------------------------------------
 #Using descdist to check potential distributions to test in the model
 
 descdist(param_all_w0$Tu_lambda, discrete=FALSE, boot=1000)
@@ -105,11 +204,11 @@ descdist(param_all_w0$Te_inter, discrete=FALSE, boot=1000)
 
 #' This next section corresponds to a series of statistical tests to evaluate changes in growth rate, intraspecific competition and interspecific competition. For each trait we perform a test for Tu and Te species.
 #' In the end of each section we provide a summary of the results. These results are cited directly in text or in supplementary tables.
-#' ## Does cadmium change parameters? (no evolution)
+## Does cadmium change parameters? (no evolution)
 #' 
-#' ### Growth rate
-#' #### Tu
-## ---------------------------
+### Growth rate-------
+#### Tu-------
+##
 # Testing the effect of cadmium on growth rate using different distributions  
 gr_tu_cd_1<-glmmTMB(Tu_lambda~Environment, data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ))
 gr_tu_cd_2<-glmmTMB(Tu_lambda~Environment, data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ), family=Gamma(link="log"))
@@ -128,8 +227,8 @@ plot(simulationOutput)
 #' 
 #' Cadmium significantly decreases growth rate for Tu.
 #' 
-#' #### Te
-## ---------------------------
+#### Te----------
+## ------------------------------------
 # Testing the effect of cadmium on growth rate using different distributions  
 gr_te_cd_1<-glmmTMB(Te_lambda~Environment,  data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ))
 gr_te_cd_2<-glmmTMB(Te_lambda~Environment,  data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ), family=Gamma(link="log"))
@@ -146,10 +245,10 @@ plot(simulationOutput)# No problems
 
 #' Cadmium significantly decreases growth rate for Te. Best model is with gamma distribution.
 #' 
-#' ### Intraspecific competition
+### Intraspecific competition----------
 #' 
-#' #### Tu
-## ---------------------------
+#### Tu----------
+
 # Testing the effect of cadmium on intraspecific competition using different distributions  
 intra_tu_cd_1<-glmmTMB(Tu_intra~Environment,  data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ))
 intra_tu_cd_2<-glmmTMB(Tu_intra+1~Environment,  data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ), family=Gamma(link="log"))
@@ -167,9 +266,9 @@ plot(simulationOutput)# No problems
 #' 
 #' Presence of cadmium decreases intraspecific competition.
 #' 
-#' #### Te
+#### Te----------
 #' 
-## ---------------------------
+
 # Testing the effect of cadmium on intraspecific competition using different distributions
 intra_te_cd_1<-glmmTMB(Te_intra~Environment,  data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ))
 intra_te_cd_2<-glmmTMB(Te_intra+1~Environment,  data=subset(param_all_w0, Tu_Regime=="SR1" & Te_Regime=="SR4" ), family=Gamma(link="log"))
@@ -187,11 +286,10 @@ plot(simulationOutput) #No problems
 #' 
 #' Presence of cadmium decreases intraspecific competition.
 #' 
-#' ### Interspecific competition
+### Interspecific competition----------
 #' 
-#' #### Tu
+#### Tu----------
 #' 
-## ---------------------------
 # Testing the effect of cadmium on interspecific competition using different distributions. Here we only use the data from the regimes that evolved in the no-cadmium environment
 inter_tu_cd_1<-glmmTMB(Tu_inter~Environment, data=subset(param_all_w0, (Tu_Regime=="SR1" & Te_Regime=="SR4")))
 inter_tu_cd_2<-glmmTMB(Tu_inter+1~Environment, data=subset(param_all_w0, (Tu_Regime=="SR1" & Te_Regime=="SR4")), family=Gamma(link="log"))
@@ -209,9 +307,8 @@ plot(simulationOutput) #no problems
 #'  
 #' Presence of cadmium decreases intraspecific competition for Tu
 #' 
-#' #### Te
+#### Te----------
 #' 
-## ---------------------------
 # Testing the effect of cadmium on interspecific competition using different distributions. Here we only use the data from the regimes that evolved in the no-cadmium environment
 inter_te_cd_1<-glmmTMB(Te_inter~Environment, data=subset(param_all_w0, (Tu_Regime=="SR1" & Te_Regime=="SR4")))
 inter_te_cd_2<-glmmTMB(Te_inter+1~Environment, data=subset(param_all_w0, (Tu_Regime=="SR1" & Te_Regime=="SR4")), family=Gamma(link="log"))
@@ -231,10 +328,10 @@ plot(simulationOutput) #No problems
 #' Presence of cadmium decreases interspecific competition for Te
 #' 
 #' 
-#' ### Summary
+## Summary----------
 #' Results are cited in Table S5. The estimate, z-value and p-value correspond to the row indicated by EnvironmentN, which correspond to the differences between the no cadmium and cadmium environment.
 #' 
-## ---------------------------
+
 summary(gr_tu_cd_2)
 
 summary(gr_te_cd_2)
@@ -260,12 +357,12 @@ Anova(inter_tu_cd_1)
 Anova(inter_te_cd_1)
 
 #' 
-#' ## Does evolution change the performance in cadmium?
+## Does evolution change the performance in cadmium?----------
 #' 
-#' ### Growth rate
+### Growth rate----------
 #' 
-#' #### Tu
-## ---------------------------
+#### Tu----------
+
 # Testing the effect of evolution on cadmium on growth rate on cadmium watered plants using different distributions  
 gr_tu_ev_1<-glmmTMB(Tu_lambda~Tu_Regime, data=subset(param_all_w0, Environment=="Cd" & Te_Regime=="SR4"))
 gr_tu_ev_2<-glmmTMB(Tu_lambda~Tu_Regime, data=subset(param_all_w0, Environment=="Cd"& Te_Regime=="SR4"), family=Gamma(link="log"))
@@ -283,9 +380,9 @@ plot(simulationOutput) #no problems
 #' No differences between models.
 #' Evolution in cadmium increases the growth rate in cadmium for Tu
 #' 
-#' #### Te
+#### Te----------
 #' 
-## ---------------------------
+
 # Testing the effect of evolution on cadmium on growth rate on cadmium watered plants using different distributions  
 gr_te_ev_1<-glmmTMB(Te_lambda~Te_Regime, data=subset(param_all_w0, Environment=="Cd"& Tu_Regime=="SR1"))
 gr_te_ev_2<-glmmTMB(Te_lambda~Te_Regime, data=subset(param_all_w0, Environment=="Cd"& Tu_Regime=="SR1"), family=Gamma(link="log"))
@@ -304,11 +401,11 @@ plot(simulationOutput)# No problems
 #' Evolution in cadmium increases growth rate in cadmium, but only marginally
 #' 
 #' 
-#' ### Intraspecif competition
+### Intraspecif competition----------
 #' 
-#' #### Tu
+#### Tu----------
 #' 
-## ---------------------------
+
 # Testing the effect of evolution on cadmium on intraspecific competition on cadmium watered plants using different distributions
 intra_tu_ev_1<-glmmTMB(Tu_intra~Tu_Regime, data=subset(param_all_w0, Environment=="Cd"& Te_Regime=="SR4"))
 intra_tu_ev_2<-glmmTMB(Tu_intra+1~Tu_Regime, data=subset(param_all_w0, Environment=="Cd"& Te_Regime=="SR4"), family=Gamma(link="log"))
@@ -326,8 +423,8 @@ plot(simulationOutput) #no problems
 #' Similar models.
 #' Evolution in cadmium does not affect intraspecific competition in Tu
 #' 
-#' #### Te
-## ---------------------------
+#### Te----------
+
 # Testing the effect of evolution on cadmium on intraspecific competition on cadmium watered plants using different distributions
 intra_te_ev_1<-glmmTMB(Te_intra~Te_Regime, data=subset(param_all_w0, Environment=="Cd"& Tu_Regime=="SR1"))
 intra_te_ev_2<-glmmTMB(Te_intra+1~Te_Regime, data=subset(param_all_w0, Environment=="Cd"& Tu_Regime=="SR1"), family=Gamma(link="log"))
@@ -346,11 +443,11 @@ plot(simulationOutput) #no problems
 #' Evolution in cadmium increases intraspecific competition for Te
 #' 
 #' 
-#' ### Interspecific competition
+### Interspecific competition----------
 #' 
-#' #### Tu
+#### Tu----------
 #' 
-## ---------------------------
+
 # Testing the effect of evolution on cadmium on interspecific competition on cadmium watered plants using different distributions
 inter_tu_ev_1<-glmmTMB(Tu_inter~Tu_Regime*Te_Regime, data=subset(param_all_w0, Environment=="Cd"))
 inter_tu_ev_2<-glmmTMB(Tu_inter+1~Tu_Regime*Te_Regime, data=subset(param_all_w0, Environment=="Cd"), family=Gamma(link="log"))
@@ -367,9 +464,9 @@ plot(simulationOutput) #no problem
 
 #' There is no difference between AIC for the models
 #' 
-#' #### Te
+#### Te----------
 #' 
-## ---------------------------
+
 # Testing the effect of evolution on cadmium on interspecific competition on cadmium watered plants using different distributions
 inter_te_ev_1<-glmmTMB(Te_inter~Te_Regime*Tu_Regime, data=subset(param_all_w0, Environment=="Cd"))
 inter_te_ev_2<-glmmTMB(Te_inter+1~Te_Regime*Tu_Regime, data=subset(param_all_w0, Environment=="Cd"), family=Gamma(link="log"))
@@ -395,9 +492,9 @@ emmeans(inter_te_ev_1, pairwise~Te_Regime+Tu_Regime, type="response")
 #' Evolution in cadmium affects interspecific competition of Te and this effect depends on the evolution of Tu. Namely against Tu that did not evolve in cadmium the populations of Te that evolved in cadmium suffer more from interspecific competition. However, this does not happen for Tu that evolved in cadmium, where competition slightly decreases when Te evolved in cadmium.
 #' 
 #' 
-#' ### Summary
+## Summary----------
 #' Results of the ANOVA for growth rate and intraspecific competition are cited in text. The ANOVA results for interspecific competition are cited in Table S3A. The  results from emmeans for Te are cited in Table S3B.
-## ---------------------------
+
 summary(gr_tu_ev_2)
 
 summary(gr_te_ev_2)
@@ -434,13 +531,12 @@ Anova(inter_te_ev_1, type=3)
 emmeans(inter_te_ev_1, pairwise~Te_Regime+Tu_Regime, type="response")
 
 #' 
-#' ## Does evolution change the performance in the ancestral environment?
+## Does evolution change the performance in the ancestral environment?----------
 #' 
-#' ### Growth rate
+### Growth rate----------
 #' 
-#' #### Tu
+#### Tu----------
 #' 
-## ---------------------------
 # Testing the effect of evolution on cadmium on growth rate on plants without cadmium using different distributions 
 gr_tu_an_1<-glmmTMB(Tu_lambda~Tu_Regime, data=subset(param_all_w0, Environment=="N" & Te_Regime=="SR4"))
 gr_tu_an_2<-glmmTMB(Tu_lambda~Tu_Regime, data=subset(param_all_w0, Environment=="N"& Te_Regime=="SR4"), family=Gamma(link="log"))
@@ -457,9 +553,8 @@ plot(simulationOutput)# no problem
 #' Gamma shows slightly lower AIC
 #' No effect, although evolution in cadmium slightly reduces growth rate.
 #' 
-#' #### Te
+#' #### Te----------
 #' 
-## ---------------------------
 # Testing the effect of evolution on cadmium on growth rate on plants without cadmium using different distributions 
 gr_te_an_1<-glmmTMB(Te_lambda~Te_Regime, data=subset(param_all_w0, Environment=="N"& Tu_Regime=="SR1"))
 gr_te_an_2<-glmmTMB(Te_lambda~Te_Regime, data=subset(param_all_w0, Environment=="N"& Tu_Regime=="SR1"), family=Gamma(link="log"))
@@ -476,11 +571,11 @@ plot(simulationOutput)
 #' 
 #' No effect of evolution in cadmium,  although evolution in cadmium slightly reduces growth rate.
 #' 
-#' ### Intra
+### Intra----------
 #' 
-#' #### Tu
+#### Tu----------
 #' 
-## ---------------------------
+
 # Testing the effect of evolution on cadmium on intraspecific competition on plants without cadmium using different distributions 
 intra_tu_an_1<-glmmTMB(Tu_intra~Tu_Regime, data=subset(param_all_w0, Environment=="N"& Te_Regime=="SR4"))
 intra_tu_an_2<-glmmTMB(Tu_intra+1~Tu_Regime, data=subset(param_all_w0, Environment=="N"& Te_Regime=="SR4"), family=Gamma(link="log"))
@@ -498,9 +593,9 @@ plot(simulationOutput) #no problem
 #' 
 #' No effect of evolution in cadmium, although it slighlty decreases the intraspecific competition
 #' 
-#' #### Te
+#### Te----------
 #' 
-## ---------------------------
+
 # Testing the effect of evolution on cadmium on intraspecific competition on plants without cadmium using different distributions 
 intra_te_an_1<-glmmTMB(Te_intra~Te_Regime, data=subset(param_all_w0, Environment=="N"& Tu_Regime=="SR1"))
 intra_te_an_2<-glmmTMB(Te_intra+1~Te_Regime, data=subset(param_all_w0, Environment=="N"& Tu_Regime=="SR1"), family=Gamma(link="log"))
@@ -518,10 +613,10 @@ plot(simulationOutput)# no problem
 #' 
 #' Evolution in cadmium does not affect Te intraspecific competition in the ancestral environment
 #' 
-#' ### Interspecific competition
+### Interspecific competition----------
 #' 
-#' #### Tu
-## ---------------------------
+#### Tu----------
+
 # Testing the effect of evolution on cadmium on interspecific competition on plants without cadmium using different distributions 
 inter_tu_an_1<-glmmTMB(Tu_inter~Tu_Regime*Te_Regime, data=subset(param_all_w0, Environment=="N"))
 inter_tu_an_2<-glmmTMB(Tu_inter+1~Tu_Regime*Te_Regime, data=subset(param_all_w0, Environment=="N"), family=Gamma(link="log"))
@@ -539,9 +634,9 @@ plot(simulationOutput) # no problem
 #' 
 #' Evolution in cadmium does not affect sensitivity to interspecific competition for Tu in the ancestral environment
 #' 
-#' #### Te
+#### Te----------
 #' 
-## ---------------------------
+
 # Testing the effect of evolution on cadmium on interspecific competition on plants without cadmium using different distributions 
 inter_te_an_1<-glmmTMB(Te_inter~Te_Regime*Tu_Regime, data=subset(param_all_w0, Environment=="N"))
 inter_te_an_2<-glmmTMB(Te_inter+1~Te_Regime*Tu_Regime, data=subset(param_all_w0, Environment=="N"), family=Gamma(link="log"))
@@ -560,9 +655,9 @@ plot(simulationOutput) # no problems
 #' No difference in model AIC
 #' No changes in interspecific competition for Te in the ancestral environment, after evolution in cadmium
 #' 
-#' ### Summary
+### Summary----------
 #' Results of the ANOVA for growth rate and intraspecific competition are cited in text. The ANOVA results for interspecific competition are cited in Table S4.
-## ---------------------------
+
 summary(gr_tu_an_2)
 
 summary(gr_te_an_2)
@@ -576,11 +671,6 @@ summary(inter_tu_an_1)
 summary(inter_te_an_1)
 
 
-emmeans(inter_tu_an_1, pairwise~Te_Regime:Tu_Regime, adjust="none")
-
-emmeans(inter_te_an_1, pairwise~Te_Regime:Tu_Regime, adjust="none")
-
-
 Anova(gr_tu_an_2)
 Anova(gr_te_an_2)
 
@@ -590,19 +680,18 @@ Anova(intra_te_an_1)
 Anova(inter_tu_an_1, type=3)
 Anova(inter_te_an_1, type=3)
 
-
+## Bootstrap analyses ----------
 #' 
 #' ## Bootstrap differences between selection regimes
 #' 
 #' Beware this script takes a long time to run.
 #' For each question we will randomize the replicates between selection regimes, using 10000 bootstrap samples and test how many times do we recover significant differences between the different regimes just by chance.
 #' 
-## ---------------------------
 set.seed(1809) # Setting the seed to ensure reproducibility
 nboot<-10000 # Number of bootstrap samples
 
-if(!eval){
-  load(file="../Analyses/Bootstrap_stats_tests_10000.RData")
+if(!evaluation){
+  load(file="./Analyses/Bootstrap_stats_tests.RData")
 }
 
 #' 
@@ -610,8 +699,8 @@ if(!eval){
 #' ### Does cadmium change parameters?
 #' #### Tu
 #' 
-## ---------------------------
-if(eval){
+
+if(evaluation){
 #Bootstrap to reestimate the p-value obtained for growth rate and intraspecific competition.
 boot_tu_gr_intra_env<-as.data.frame(t(sapply(c(1:nboot),function(x){
   # Printing every 10 samples
@@ -653,8 +742,8 @@ boot_tu_gr_intra_env<-as.data.frame(t(sapply(c(1:nboot),function(x){
 #' 
 #' #### Te
 #' 
-## ---------------------------
-if(eval){
+
+if(evaluation){
 #Bootstrap to reestimate the p-value obtained for growth rate and intraspecific competition.
 boot_te_gr_intra_env<-as.data.frame(t(sapply(c(1:nboot),function(x){
   
@@ -703,7 +792,7 @@ str(boot_te_gr_intra_env)
 #' 
 #' #### Printing the p-value
 #' 
-## ---------------------------
+
 #Number of times that p-value was lower than 0.05
 length(which(boot_tu_gr_intra_env$lambda_p<=0.05))/(nboot)
 
@@ -718,7 +807,7 @@ length(which(boot_te_gr_intra_env$intra_p<=0.05))/(nboot)
 length(which(boot_te_gr_intra_env$inter_p<=0.05))/(nboot)
 
 #' 
-## ---------------------------
+
 print("Boot p-values for tests between environments")
 length(which(boot_tu_gr_intra_env$lambda_p<=as.data.frame(Anova(gr_tu_cd_2))[,3]))/(nboot+1)
 
@@ -737,8 +826,8 @@ length(which(boot_te_gr_intra_env$inter_p<=as.data.frame(Anova(inter_te_cd_1))[,
 #' ### Does evolution change the performance in cadmium?
 #' #### Tu
 #' 
-## ---------------------------
-if(eval){
+
+if(evaluation){
 #Bootstrap to reestimate the p-value obtained for growth rate and intraspecific competition to test if evoution affected the performance in cadmium
 boot_tu_evolcd<-as.data.frame(t(sapply(c(1:nboot),function(x){
     # Printing every 10 samples
@@ -795,8 +884,8 @@ boot_tu_evolcd<-as.data.frame(t(sapply(c(1:nboot),function(x){
 #' 
 #' #### Te
 #' 
-## ---------------------------
-if(eval){
+
+if(evaluation){
 #Bootstrap to reestimate the p-value obtained for growth rate and intraspecific competition to test if evoution affected the performance in cadmium. For T. evansi
 boot_te_evolcd<-as.data.frame(t(sapply(c(1:nboot),function(x){
   # Printing every 10 samples
@@ -854,7 +943,7 @@ colnames(boot_te_evolcd)<-c("lambda_p","intra_p","inter_p_TuReg","inter_p_TeReg"
 #' 
 #' #### Printing the p-value
 #' 
-## ---------------------------
+
 #Number of times that p-value was lower than 0.05
 length(which(boot_tu_evolcd$lambda_p<=0.05))/(nboot)
 length(which(boot_tu_evolcd$intra_p<=0.05))/(nboot)
@@ -868,7 +957,7 @@ length(which(boot_te_evolcd$inter_p_TeReg<=0.05))/(nboot)
 length(which(boot_te_evolcd$inter_p_int<=0.05))/(nboot)
 
 #' 
-## ---------------------------
+
 
 print("Boot p-values for tests for evolution in cadmium")
 length(which(boot_tu_evolcd$lambda_p<=as.data.frame(Anova(gr_tu_ev_2))[,3]))/(nboot+1)
@@ -897,8 +986,8 @@ length(which(boot_te_evolcd$inter_p_int<=as.data.frame(Anova(inter_te_ev_1))[3,3
 #' 
 #' #### Tu
 #' 
-## ---------------------------
-if(eval){
+
+if(evaluation){
 #Bootstrap to reestimate the p-value obtained for growth rate and intraspecific competition to test if evoution affected the performance in the ancestral environment
 boot_tu_evolN<-as.data.frame(t(sapply(c(1:nboot),function(x){
   
@@ -955,8 +1044,8 @@ boot_tu_evolN<-as.data.frame(t(sapply(c(1:nboot),function(x){
 #' 
 #' #### Te
 #' 
-## ---------------------------
-if(eval){
+
+if(evaluation){
 #Bootstrap to reestimate the p-value obtained for growth rate and intraspecific competition to test if evoution affected the performance in the ancestral environment. for Te
 boot_te_evolN<-as.data.frame(t(sapply(c(1:nboot),function(x){
   # Printing every 10 samples
@@ -1015,7 +1104,7 @@ colnames(boot_te_evolN)<-c("lambda_p","intra_p","inter_p_TuReg","inter_p_TeReg",
 
 #' 
 #' ### Printing the p-value
-## ---------------------------
+
 #Number of times that p-value was lower than 0.05
 length(which(boot_tu_evolN$lambda_p<=0.05))/(nboot)
 length(which(boot_tu_evolN$intra_p<=0.05))/(nboot)
@@ -1030,7 +1119,7 @@ length(which(boot_te_evolN$inter_p_int<=0.05))/(nboot)
 
 
 #' 
-## ---------------------------
+
 print("Boot p-values for tests for evolution in cadmium")
 length(which(boot_tu_evolN$lambda_p<=as.data.frame(Anova(gr_tu_an_2))[,3]))/(nboot+1)
 
@@ -1055,17 +1144,16 @@ length(which(boot_te_evolN$inter_p_int<=as.data.frame(Anova(inter_te_an_1))[3,3]
 #' 
 #' 
 #' #### Save the results
-## ---------------------------
 # save the results so we can reuse it later
-if(eval){
-save.image(file="../Analyses/Bootstrap_stats_tests_10000.RData")
+if(evaluation){
+save.image(file="./Analyses/Bootstrap_stats_tests.RData")
   }
-
+print("Structural stability")
 #' 
-#' # Predicting coexistence using structural stability
+# Predicting coexistence using structural stability----------
 #' 
 #' ## Defining functions
-## ---------------------------
+
 #input parameters:
 #alpha = competition strength matrix 
 #r = vector of intrinsic growth rates
@@ -1104,10 +1192,10 @@ test_feasibility <- function(alpha,r){
 }
 
 #' 
-#' ## Estimating structural stability for pooled replicates
+## Estimating structural stability for pooled replicates----------
 #' 
 #' Here we use the parameter estimates to calculate niche and fitness differences to predict coexistence.
-## ---------------------------
+
 # Creates a loop to predict coexistence for each combination of selection regimes and environments
 struct_mat_REP<-as.data.frame(t(as.data.frame(sapply(c(1:length(param_all_REP[,1])), function(x){
   #print(x)
@@ -1172,10 +1260,10 @@ struct_mat_REP<-cbind(param_all_REP, struct_mat_REP,struct_mat_REP_L,struct_mat_
 
 
 #' 
-#' ## Estimating structural stability per replicate
+## Estimating structural stability per replicate----------
 #' Here we apply the same loop as above, but doing the estimates per replicate.
 #' 
-## ---------------------------
+
 # Creates a loop to predict coexistence for each combination of selection regimes and environments
 struct_mat_w0<-as.data.frame(t(as.data.frame(sapply(c(1:length(param_all_w0[,1])), function(x){
   
@@ -1237,10 +1325,12 @@ struct_mat_w0<-cbind(param_all_w0, struct_mat_w0,struct_mat_w0_L,struct_mat_w0_U
 
 #' 
 #' 
-#' ## Estimate distance to the edge and who wins
+## Estimate distance to the edge----------
+
+### Pooled data----------
 #' 
 #' We calculate the distance to the edge and the species who will win, following Allen-Perkins et al. 2023; Medeiros et al. 2021.
-## ---------------------------
+
 # Calculate the slope that define the edges of the feasibility domain for each combination of selection regimes 
 struct_mat_REP$a21_a11<-struct_mat_REP$Te_inter/struct_mat_REP$Tu_intra
 struct_mat_REP$a22_a12<-struct_mat_REP$Te_intra/struct_mat_REP$Tu_inter
@@ -1277,7 +1367,7 @@ struct_mat_REP$max_a22_a12<-sapply(c(1:dim(struct_mat_REP)[1]), function(x){
 
 #' 
 #' 
-## ---------------------------
+### Replicate data----------
 ### Doing the same thing per replicate
 # Calculate the slope that define the edges of the feasibility domain for each combination of selection regimes 
 struct_mat_w0$a21_a11<-struct_mat_w0$Te_inter/struct_mat_w0$Tu_intra
@@ -1292,7 +1382,6 @@ struct_mat_w0$a22_a12_upper<-param_all_w0_upper$Te_intra/param_all_w0_upper$Tu_i
 #' 
 #' ## Estimating the distance for the pooled data
 #' 
-## ---------------------------
 # CI is estimated using as reference the vector of the growth rate and then estimating the difference to the lower or upper edges. Negative distances indicate unfeasible systems
 
 # Distance to the edge of Turticae
@@ -1372,7 +1461,6 @@ struct_mat_REP$distanceTe_upper<-sapply(c(1:length(struct_mat_REP$ND)), function
 #' 
 #' ## Estimating distance to the edge per replicate
 #' 
-## ---------------------------
 # Creating a loop to estimate the distance to the Tu edge per replicate (same code as above, just applied to a different matrix)
 struct_mat_w0$distanceTu<-sapply(c(1:length(struct_mat_w0$ND)), function(x){
   if(struct_mat_w0$Feasibility[x]==0){
@@ -1445,21 +1533,17 @@ struct_mat_w0$distanceTe_upper<-sapply(c(1:length(struct_mat_w0$ND)), function(x
 
 #' 
 #' 
-#' #### Saving
+## Saving----------
 #' 
-## ---------------------------
+## 
 # If you are running the code to evaluate and store data 
-if(eval){
+if(evaluation){
   # write the results for the pooled data
-  write.csv(struct_mat_REP, "../Analyses/structural_REP_new.csv")
+  write.csv(struct_mat_REP, "./Analyses/structural_Pooled.csv")
   # write the results for the replicate data
-  write.csv(struct_mat_w0, "../Analyses/structural_REP_w0_new.csv")
+  write.csv(struct_mat_w0, "./Analyses/structural_Replicates.csv")
 }
 
-
-#' 
-#' 
-## ---------------------------
 # # Because of facilitation (specially when there is double facilitation estimated) the distance of the upper and lower estimates is switched. 
 struct_mat_REP_final<-struct_mat_REP
 # loop to order the results
@@ -1513,10 +1597,9 @@ struct_mat_REP_final<-as.data.frame(cbind(struct_mat_REP[,c(1,2,3)], aux_Tu_orde
 struct_mat_w0_final<-as.data.frame(cbind(struct_mat_w0[,c(1,2,3,4)], aux_Tu_orders_w0, aux_Te_orders_w0))
 
 #' 
-#' ## Estimating the minimum distance to the edge
+## Estimating the minimum distance to the edge----------
 #' To know what is the likelihood for a system to leave (or enter the feasibility domain) we will estimate the minimum distance to the edges of feasibility domain. This could be the distance from the edge that corresponds to the competitive interactions for Te or Tu.
 #' 
-## ---------------------------
 ### minimum distance
 struct_mat_REP_final2<-struct_mat_REP_final
 
@@ -1563,13 +1646,13 @@ struct_mat_REP_final<-as.data.frame(cbind(struct_mat_REP_final, aux_min_distance
 
 struct_mat_w0_final<-as.data.frame(cbind(struct_mat_w0_final, aux_min_distance_w0))
 
-if(eval){
+if(evaluation){
 # Write for the figure
-write.csv(struct_mat_REP_final,"../Analyses/min_distance_pooled.csv")
-write.csv(struct_mat_w0_final,"../Analyses/min_distance_per_replicate.csv")
+write.csv(struct_mat_REP_final,"./Analyses/min_distance_pooled.csv")
+write.csv(struct_mat_w0_final,"./Analyses/min_distance_per_replicate.csv")
 }
-
-
+print("Population growth experiments")
+# Population growth experiments ----------
 #' 
 #' 
 #' # Testing fit of predictions
@@ -1577,8 +1660,7 @@ write.csv(struct_mat_w0_final,"../Analyses/min_distance_per_replicate.csv")
 #' 
 #' ## Importing data
 #' 
-## ---------------------------
-coex_g42<-read.csv("../Data/Coexistence_Cd_G42_submit.csv", header=TRUE) # Data from the population dynamics experiment
+coex_g42<-read.csv("./Data/Coexistence_Cd_G42_submit.csv", header=TRUE) # Data from the population dynamics experiment
 
 # Transforming columns into factors
 coex_g42$Rep2<-as.factor(coex_g42$Rep)
@@ -1626,12 +1708,11 @@ coex_g42_rep$Env[which(coex_g42_rep$Env=="Cd")]<-"Cd"
 #' 
 #' ### Can we predict the outcome of species interactions?
 #' 
-#' ##### Predicting first generation pooled data
+### Predicting first generation pooled data----------
 #' 
 #' Here we will use the parameter estimates and predict the number of offspring produced after one generation.
 #' The code applied will always be the same to Te and Tu and lower and upper bounds, the only thing that changes are the estimates used (that match the species and interval considered).
 #' 
-## ---------------------------
 # creating the data frame to predict
 pred_coex_RK_REP<-expand_grid(Te=c("SR4","SR5"), Tu=c("SR1", "SR2"), Environment= c("N", "Cd"))
 
@@ -1656,11 +1737,11 @@ pred_coex_RK_REP$predTe1<-sapply(c(1:length(pred_coex_RK_REP$Te)), function(x){
 })
 
 #' 
-#' ##### Predicting second generation pooled data
+### Predicting second generation pooled data----------
 #' 
 #' Here we will use the parameter estimates and predict the number of offspring produced after two generations. For that we use the number of individuals predicted in the previous generation and use that as competitors.
 #' The code applied will always be the same to Te and Tu and lower and upper bounds, the only thing that changes are the estimates used (that match the species and interval considered).
-## ---------------------------
+
 # Predicting Tu
 pred_coex_RK_REP$predTu2<-sapply(c(1:length(pred_coex_RK_REP$Tu)), function(x){
   # subset data to get parameters
@@ -1682,9 +1763,8 @@ pred_coex_RK_REP$predTe2<-sapply(c(1:length(pred_coex_RK_REP$Te)), function(x){
 })
 
 #' 
-#' ##### Predicting for lower and upper boundaries
+### Predicting for lower and upper boundaries----------
 #' 
-## ---------------------------
 #lower - stronger alpha and lower lambda
 # Tu populations first generation
 pred_coex_RK_REP$predTu1_L<-sapply(c(1:length(pred_coex_RK_REP$Tu)), function(x){
@@ -1727,7 +1807,7 @@ pred_coex_RK_REP$predTe2_L<-sapply(c(1:length(pred_coex_RK_REP$Te)), function(x)
 
 #' 
 #' Upper estimates
-## ---------------------------
+##
 # upper bounds
 # Tu populations first generation
 pred_coex_RK_REP$predTu1_U<-sapply(c(1:length(pred_coex_RK_REP$Tu)), function(x){
@@ -1773,10 +1853,10 @@ names(pred_coex_RK_REP)[1:3]<-c("SRTe", "SRTu", "Env")
 pred_coex_RK_REP<-as.data.frame(pred_coex_RK_REP)
 
 #' 
-#' ##### Predicting first generation per replicate
+### Predicting first generation per replicate----------
 #' We will use the same approach as we did for the pooled data
 #' 
-## ---------------------------
+
 # creating the data frame to store data
 pred_coex_RK_w0<-as.data.frame(expand_grid(Te=c("SR4","SR5"), Tu=c("SR1", "SR2"), Environment= c("N", "Cd"), Replicate=c(1,2,3,4,5)))
 
@@ -1818,9 +1898,9 @@ pred_coex_RK_w0$predTe2<-sapply(c(1:length(pred_coex_RK_w0$Te)), function(x){
 })
 
 #' 
-#' ##### Predicting for lower and upper boundaries
+### Predicting for lower and upper boundaries----------
 #' 
-## ---------------------------
+
 # lower - stronger alpha and lower lambda
 # predicting Tu for first generation
 pred_coex_RK_w0$predTu1_L<-sapply(c(1:length(pred_coex_RK_w0$Tu)), function(x){
@@ -1862,7 +1942,7 @@ pred_coex_RK_w0$predTe2_L<-sapply(c(1:length(pred_coex_RK_w0$Te)), function(x){
 
 #' 
 #' Upper estimates
-## ---------------------------
+
 # upper
 # predicting Tu for first generation
 pred_coex_RK_w0$predTu1_U<-sapply(c(1:length(pred_coex_RK_w0$Tu)), function(x){
@@ -1908,9 +1988,8 @@ names(pred_coex_RK_w0)[1:3]<-c("SRTe", "SRTu", "Env")
 pred_coex_RK_w0<-as.data.frame(pred_coex_RK_w0)
 
 #' 
-#' #### Estimating number of observed females
+## Estimating number of observed females----------
 #' Using the data from the population dynamics
-## ---------------------------
 
 # Summarizing per box
 coex_g42_rep2<-coex_g42_rep %>%
@@ -1938,7 +2017,6 @@ sum_observed_coex<-coex_g42_rep3
 
 
 #' 
-## ---------------------------
 # Summarizing data at the level of the Regime
 sum_observed_coex2<-sum_observed_coex %>%
   group_by(SRTu2, SRTe2, Env)%>%
@@ -1950,7 +2028,6 @@ sum_observed_coex2$TeRatio_U<-sum_observed_coex2$TeRatio+sum_observed_coex2$sdTe
 
 #' 
 #' Setting up data frames to join data
-## ---------------------------
 ## Estimating predicted proportion of Te for the pooled data
 pred_coex_RK_REP$TeRatio<-sapply(c(1:dim(pred_coex_RK_REP)[1]), function(x){
   pred_coex_RK_REP$predTe2[x]/(pred_coex_RK_REP$predTe2[x]+pred_coex_RK_REP$predTu2[x])
@@ -1980,8 +2057,8 @@ pred_coex_RK_w0$TeRatio_U<-sapply(c(1:dim(pred_coex_RK_w0)[1]), function(x){
 
 #' 
 #' 
-## ---------------------------
-# Predicted data
+# Joining empirical and predicted data----------
+#Predicted data
 sum_pred_coex_RK_REP<-pred_coex_RK_REP %>%
   group_by(SRTu, SRTe, Env)%>%
   summarise(predTe=mean(predTe2, na.rm=TRUE),predTu=mean(predTu2, na.rm=TRUE), sumTeRatio=(sum(predTe2, na.rm=TRUE)/(sum(predTe2, na.rm=TRUE)+sum(predTu2, na.rm=TRUE)))) %>% as.data.frame()
@@ -2022,12 +2099,11 @@ sum2_observed_coex_ALL$predTeRatio<-sapply(c(1:dim(sum2_observed_coex_ALL)[1]), 
 
 
 
-#' ### Comparing to data
+## Comparing to data---------
 #' Here we will compare the predicted and observed proportion of Te females for each combination of regimes, at the replicate and pooled data
 #' 
 #' #### Testing pooled replicates
 #' 
-## ---------------------------
 #This forces the line to pass by the 0,0, as the reviewer suggested
 
 m7<-glmmTMB(obs_TeRatio~0+pred_T1, data=sum_observed_coex_rep, family="Gamma")
@@ -2036,21 +2112,21 @@ emtrends(m7, var="pred_T1", type="response")
 test(emtrends(m7, var="pred_T1", type="response"))
 
 # writing file
-if(eval){
-write.csv(sum_observed_coex_rep, file="../Analyses/popDyn_pooledData.csv")
+if(evaluation){
+write.csv(sum_observed_coex_rep, file="./Analyses/popDyn_pooledData.csv")
 }
 
 #' 
 #' #### Testing per replicate
 #' 
-## ---------------------------
+
 sum_observed_coex_ALL2<-sum2_observed_coex_ALL %>%
   group_by(SRTe, SRTu, Env) %>%
   summarize(meanRatio=mean(meanTeRatio, na.rm=TRUE), mean_pred=mean(predTeRatio, na.rm=TRUE), sdRatio=sd(meanTeRatio, na.rm=TRUE)/sqrt(5), sdPred=sd(predTeRatio, na.rm=TRUE)/sqrt(5), meanTe=mean(sum_Te, na.rm=TRUE), meanTu=mean(sum_Tu, na.rm=TRUE))
 
-if(eval){
+if(evaluation){
 #writing file
-write.csv(sum_observed_coex_ALL2, file="../Analyses/popDyn_replicates.csv")
+write.csv(sum_observed_coex_ALL2, file="./Analyses/popDyn_replicates.csv")
 }
 
 m7_rep2<-glmmTMB(meanRatio~0+mean_pred, data=sum_observed_coex_ALL2, family="Gamma")
@@ -2058,8 +2134,12 @@ summary(m7_rep2)
 emtrends(m7_rep2, var="mean_pred", type="response")
 test(emtrends(m7_rep2, var="mean_pred", type="response"))
 
+print(paste("Slope:", round(log(coefficients(summary(m7_rep2))$cond[1]),3), sep=" "))
+#' 
+#' 
+#' 
+#' 
+# Figures --------
+# Script to run and get all figures, except figure S2
+source("./Code/Figures.R")
 
-#' 
-#' 
-#' 
-#' 

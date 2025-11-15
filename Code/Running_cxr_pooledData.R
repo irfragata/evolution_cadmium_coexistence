@@ -2,40 +2,58 @@
 #' title: "R Notebook"
 #' output: html_notebook
 #' ---
-#' 
-#' # Functions, general information and packages
-#' 
-## ---------------------------
-rm(list=ls())
+
+# Note the script should be run from the main directory of the repository.
+
+# Checking if we are inside the correct folder, otherwise changing directory to the previous folder
+file_exists<-"Session_Info"
+
+if(file.exists(file_exists)){
+  setwd("../")
+  if(!file.exists("Code")){
+    print("Please ensure that the script is run from the main repository folder")
+  }
+}else{
+  if(!file.exists("Code")){
+    print("Please ensure that the script is run from the main repository folder")
+  }
+}
+
+
+## Functions, general information and packages---------------------------
+if(!require("plyr")){
+  install.packages("plyr")
+}
+if(!require("dplyr")){
+  install.packages("dplyr")
+}
+if(!require("tidyr")){
+  install.packages("tidyr")
+}
+if(!require("cxr")){
+  install.packages("cxr")
+}
+if(!require("MASS")){
+  install.packages("MASS")
+}
+if(!require("mvtnorm")){
+  install.packages("mvtnorm")
+}
+if(!require("DescTools")){
+  install.packages("DescTools")
+}
+if(!require("LSAfun")){
+  install.packages("LSAfun")
+}
+
 library(plyr)
-library(tidyverse)
-library(car)
-library(fitdistrplus)
+library(dplyr)
 library(tidyr)
 library(cxr)
 library(MASS)
 library(mvtnorm)
-library(lme4)
-library(lmerTest)
-library(emmeans)
-library(glmmTMB)
-library(MASS)
 library(DescTools)
-library(performance)
-library(DHARMa)
-library(effects)
-library(marginaleffects)
 library(LSAfun)
-library(arm)
-library(cowplot)
-library(grid)
-library(gridExtra)
-
-theme_plots<-theme(axis.text = element_text(size=14), axis.title = element_text(size=14, face="bold"), legend.text = element_text(size=12), strip.text = element_text(size=14), plot.title = element_text(size=14, face="bold"), panel.grid=element_line(colour="white"), panel.background = element_rect(fill="white") , axis.line = element_line(linewidth = 0.5, linetype = "solid",colour = "black"), strip.background = element_rect(fill="white"))
-
-save_plot<-function(dir, width=15, height=10, ...){
-  ggsave(dir, width = width, height = height, units = c("cm"))
-}
 
 # Creating vectors with regime names to use for plots
 regimeTu<-c("Tu \ncontrol", "Tu evolved \n in cadmium")
@@ -48,8 +66,8 @@ names(regimeTe)<-c("SR4", "SR5")
 #' # Importing data
 #' This chunk is used to import data, checking data and creating the columns that are necessary
 #' 
-## ---------------------------
-ca<-read.csv(file = "../Data/CompetitiveAbility_Cd_G40_submit.csv", header=TRUE) # cdata from the competitive ability
+## Import data ---------------------------
+ca<-read.csv(file = "./Data/CompetitiveAbility_Cd_G40_submit.csv", header=TRUE) # cdata from the competitive ability
 
 str(ca) 
 # Summary of the data to be sure that everything is ok!
@@ -167,9 +185,6 @@ ca$CompSR3<-as.factor(ca$CompSR3)
 
 #### Estimate growth rate
 
-ca[,c("Nr_Focal_Females_G0", "Dens", "Type")]
-
-
 ca$GrowthRateOA<-sapply(c(1:length(ca[,1])), function(x){
   #print(x)
   if(ca$Focal_Female[x]=="Tu"){
@@ -184,16 +199,19 @@ ca$GrowthRateOA<-sapply(c(1:length(ca[,1])), function(x){
 
 
 #' 
-#' # Running cxr
+## Running cxr ---------------------------
 #' 
 #' ### Setup cxr
 #' Setting the seed number and the number of bootstrap samples.
 #' 
-## ---------------------------
+
 set.seed(1809)
 bootN<-5000
 eval<- TRUE
-dir.create("../Analyses/cxr_normal_REP_best", showWarnings = FALSE)
+if(!dir.exists("./Analyses/")){
+  dir.create("./Analyses/")
+}
+dir.create("./Analyses/cxr_normal_Pooled", showWarnings = FALSE)
 
 
 #' 
@@ -201,7 +219,9 @@ dir.create("../Analyses/cxr_normal_REP_best", showWarnings = FALSE)
 #' 
 #' ### Creating a data frame for the no cadmium environment
 #' 
-## ---------------------------
+## Data setup no cadmium ---------------------------
+
+print("Creating data files for the pooled no cadmium environment")
 forCXR_N<-subset(ca, Env=="N")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales", "TuFemales")]
   
   forCXR_N$Focal<-mapvalues(forCXR_N$FocalSR, c(1,2,4,5), c("SR1", "SR2","SR4","SR5"))
@@ -276,9 +296,7 @@ forCXR_N<-subset(ca, Env=="N")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales
   #removing rows for which there is no data for fitness
   forCXR_N<-forCXR_N[-which(is.na(forCXR_N$fitness)),]
   
-  subset(forCXR_N, (Focal=="SR4" & Comp=="SR1"))
-  
-  # all data gets +1 because of the 0 problem
+  # Adding +1 to all data to allow for the 0s to be included in the cxr estimates
   forCXR_N$fitness<-forCXR_N$fitness+1
   
   # vector that tells which are the selection regimes, the columns have to have the same name
@@ -288,7 +306,10 @@ forCXR_N<-subset(ca, Env=="N")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales
 #' 
 #' ### Creating a data frame for the cadmium environment
 #' 
-## ---------------------------
+## Data setup cadmium ---------------------------
+  
+print("Creating data files for the pooled cadmium environment")
+
 forCXR_Cd<-subset(ca, Env=="Cd")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemales", "TuFemales")]
   
   forCXR_Cd$Focal<-mapvalues(forCXR_Cd$FocalSR, c(1,2,4,5), c("SR1", "SR2","SR4","SR5"))
@@ -363,36 +384,31 @@ forCXR_Cd<-subset(ca, Env=="Cd")[,c("Rep", "FocalSR", "CompSR", "Dens", "TeFemal
   #removing rows for which there is no data for fitness
   forCXR_Cd<-forCXR_Cd[-which(is.na(forCXR_Cd$fitness)),]
   
-  subset(forCXR_Cd, (Focal=="SR4" & Comp=="SR1"))
-  
-  # all data gets +1 because of the 0 problem
+  # Adding +1 to all data to allow for the 0s to be included in the cxr estimates
   forCXR_Cd$fitness<-forCXR_Cd$fitness+1
   
-  # vector that tells which are the selection regimes, the columns have to have the same name
-  my.reg <- c("SR1", "SR2","SR4","SR5")
-  
- 
-
 #' 
 #' ### Data for Pooled estimates for no cadmium
 #' 
-## ---------------------------
-  # Do list per replicate and environment
+
+  # Create list per replicate and environment
   Rep<-list(SR1= subset(forCXR_N, Focal=="SR1")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR2= subset(forCXR_N, Focal=="SR2")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR4= subset(forCXR_N,  Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_N, Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
 
 #' 
 #' ### Data for Pooled estimates for cadmium
 #' 
-## ---------------------------
-# Do list per replicate and environment
+# Create list per replicate and environment
   Rep_Cd<-list(SR1= subset(forCXR_Cd, Focal=="SR1")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR2= subset(forCXR_Cd, Focal=="SR2")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR4= subset(forCXR_Cd,  Focal=="SR4")[,c("fitness", "SR1", "SR2", "SR4", "SR5")], SR5= subset(forCXR_Cd, Focal=="SR5")[,c("fitness", "SR1", "SR2", "SR4", "SR5")])
 
 #' 
 #' ## Running cxr for pooled data
 #' The initial values used were obtained from the best models identified in the code of the file: Parameter_exploration
 #' #### No cadmium
-#' 
-## ---------------------------
+
+# Cxr no cadmium ----------------------------------------------------------
+
+  
+print("Running cxr to get parameter estimates for the no cadmium environment")
 obs.w0<-cxr_pm_multifit(data = Rep,
                           focal_column = my.reg,
                           model_family = "RK",
@@ -408,18 +424,15 @@ obs.w0<-cxr_pm_multifit(data = Rep,
                           # no standard errors
                            bootstrap_samples = bootN)
 
-obs.w0$lambda
-obs.w0$lambda_standard_error
-obs.w0$alpha_matrix
-obs.w0$alpha_matrix_standard_error
-obs.w0$log_likelihood
-
-
 #' 
 #' ###### Saving parameter and errors
-#' Storing the parameter estimates and the lower and upper bounds.
+#Storing the parameter estimates and the lower and upper bounds.
 #' 
-## ---------------------------
+# Saving parameters No cadmium --------------------------------------------
+
+
+print("Creating data frame to store mean parameter estimates for the no cadmium environment")
+# First creating the data frame and initializing everything to 0
 cxr_param_REP<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Environment=c("N"))
   cxr_param_REP$Tu_lambda<-0
   cxr_param_REP$Te_lambda<-0
@@ -428,20 +441,25 @@ cxr_param_REP<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"),
   cxr_param_REP$Tu_inter<-0
   cxr_param_REP$Te_inter<-0
   
+  # Storing the lambda values
   cxr_param_REP[,"Tu_lambda"]<-obs.w0$lambda[c(1,2,1,2)]
   cxr_param_REP[,"Te_lambda"]<-obs.w0$lambda[c(3,3,4,4)]
   
+  # Storing the intraspecific competition
   cxr_param_REP[,"Tu_intra"]<-rep(c(obs.w0$alpha_matrix[1,1], obs.w0$alpha_matrix[2,2]), 2)
   cxr_param_REP[,"Te_intra"]<-rep(c(obs.w0$alpha_matrix[3,3], obs.w0$alpha_matrix[4,4]), each=2)
   
+  # Storing the interspecific competition
   cxr_param_REP[,"Tu_inter"]<-c(obs.w0$alpha_matrix[1,3], obs.w0$alpha_matrix[2,3],obs.w0$alpha_matrix[1,4], obs.w0$alpha_matrix[2,4])
   cxr_param_REP[,"Te_inter"]<-c(obs.w0$alpha_matrix[3,1], obs.w0$alpha_matrix[3,2],obs.w0$alpha_matrix[4,1], obs.w0$alpha_matrix[4,2])
 
 #' 
 #' #### Data frame with lower estimates
-## ---------------------------
+
 ### Here we will apply the same reasoning but now estimating the lower estimates, using the stats from cxr. Lower bounds correspond to mean-error.
+  print("Creating data frame to store lower parameter estimates for the no cadmium environment")
   
+# First creating the data frame and initializing everything to 0 
   cxr_param_REP_lower<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Environment=c("N"))
   cxr_param_REP_lower$Tu_lambda<-0
   cxr_param_REP_lower$Te_lambda<-0
@@ -450,21 +468,25 @@ cxr_param_REP<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"),
   cxr_param_REP_lower$Tu_inter<-0
   cxr_param_REP_lower$Te_inter<-0
   
+  # Storing the lambda values
   cxr_param_REP_lower[,"Tu_lambda"]<-rep(c(obs.w0$lambda[1]-obs.w0$lambda_standard_error[1], obs.w0$lambda[2]-obs.w0$lambda_standard_error[2]), 2)
   cxr_param_REP_lower[,"Te_lambda"]<-rep(c(obs.w0$lambda[3]-obs.w0$lambda_standard_error[3], obs.w0$lambda[4]-obs.w0$lambda_standard_error[4]), each=2)
   
+  # Storing the intraspecific competition
   cxr_param_REP_lower[,"Tu_intra"]<-rep(c(obs.w0$alpha_matrix[1,1]-obs.w0$alpha_matrix_standard_error[1,1], obs.w0$alpha_matrix[2,2]-obs.w0$alpha_matrix_standard_error[2,2]), 2)
   cxr_param_REP_lower[,"Te_intra"]<-rep(c(obs.w0$alpha_matrix[3,3]-obs.w0$alpha_matrix_standard_error[3,3],obs.w0$alpha_matrix[4,4]-obs.w0$alpha_matrix_standard_error[4,4]), each=2)
   
-  
+  # Storing the interspecific competition
   cxr_param_REP_lower[,"Tu_inter"]<-c(obs.w0$alpha_matrix[1,3]-obs.w0$alpha_matrix_standard_error[1,3], obs.w0$alpha_matrix[2,3]-obs.w0$alpha_matrix_standard_error[2,3], obs.w0$alpha_matrix[1,4]-obs.w0$alpha_matrix_standard_error[1,4], obs.w0$alpha_matrix[2,4]-obs.w0$alpha_matrix_standard_error[2,4])
   cxr_param_REP_lower[,"Te_inter"]<-c(obs.w0$alpha_matrix[3,1]-obs.w0$alpha_matrix_standard_error[3,1], obs.w0$alpha_matrix[3,2]-obs.w0$alpha_matrix_standard_error[3,2],obs.w0$alpha_matrix[4,1]-obs.w0$alpha_matrix_standard_error[4,1], obs.w0$alpha_matrix[4,2]-obs.w0$alpha_matrix_standard_error[4,2])
 
 #' 
 #' 
 #' #### Data frame with upper estimates
-## ---------------------------
-### Here we will apply the same reasoning but now estimating the upper estimates, using the stats from cxr. Upper bounds correspond to mean-error.
+### Here we will apply the same reasoning but now estimating the upper estimates, using the stats from cxr. Upper bounds correspond to mean+error.
+
+  print("Creating data frame to store upper parameter estimates for the no cadmium environment")
+# First creating the data frame and initializing everything to 0
 cxr_param_REP_upper<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Environment=c("N"))
   cxr_param_REP_upper$Tu_lambda<-0
   cxr_param_REP_upper$Te_lambda<-0
@@ -473,13 +495,15 @@ cxr_param_REP_upper<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "
   cxr_param_REP_upper$Tu_inter<-0
   cxr_param_REP_upper$Te_inter<-0
   
+  # Storing the lambda values
   cxr_param_REP_upper[,"Tu_lambda"]<-rep(c(obs.w0$lambda[1]+obs.w0$lambda_standard_error[1], obs.w0$lambda[2]+obs.w0$lambda_standard_error[2]), 2)
   cxr_param_REP_upper[,"Te_lambda"]<-rep(c(obs.w0$lambda[3]+obs.w0$lambda_standard_error[3], obs.w0$lambda[4]+obs.w0$lambda_standard_error[4]), each=2)
   
+  # Storing the intraspecific competition
   cxr_param_REP_upper[,"Tu_intra"]<-rep(c(obs.w0$alpha_matrix[1,1]+obs.w0$alpha_matrix_standard_error[1,1], obs.w0$alpha_matrix[2,2]+obs.w0$alpha_matrix_standard_error[2,2]), 2)
   cxr_param_REP_upper[,"Te_intra"]<-rep(c(obs.w0$alpha_matrix[3,3]+obs.w0$alpha_matrix_standard_error[3,3], obs.w0$alpha_matrix[4,4]+obs.w0$alpha_matrix_standard_error[4,4]), each=2)
   
-  
+  # Storing the interspecific competition
   cxr_param_REP_upper[,"Tu_inter"]<-c(obs.w0$alpha_matrix[1,3]+obs.w0$alpha_matrix_standard_error[1,3], obs.w0$alpha_matrix[2,3]+obs.w0$alpha_matrix_standard_error[2,3],obs.w0$alpha_matrix[1,4]+obs.w0$alpha_matrix_standard_error[1,4], obs.w0$alpha_matrix[2,4]+obs.w0$alpha_matrix_standard_error[2,4])
   cxr_param_REP_upper[,"Te_inter"]<-c(obs.w0$alpha_matrix[3,1]+obs.w0$alpha_matrix_standard_error[3,1], obs.w0$alpha_matrix[3,2]+obs.w0$alpha_matrix_standard_error[3,2],obs.w0$alpha_matrix[4,1]+obs.w0$alpha_matrix_standard_error[4,1], obs.w0$alpha_matrix[4,2]+obs.w0$alpha_matrix_standard_error[4,2])
 
@@ -487,7 +511,8 @@ cxr_param_REP_upper<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "
 #' #### Cadmium
 #' Running cxr for the cadmium environment
 #' 
-## ---------------------------
+# Cxr cadmium -------------------------------------------------------------
+  print("Running cxr to get parameter estimates for the cadmium environment")
 obs.Cd_w0<-cxr_pm_multifit(data = Rep_Cd,
                              focal_column = my.reg,
                              model_family = "RK",
@@ -496,23 +521,23 @@ obs.Cd_w0<-cxr_pm_multifit(data = Rep_Cd,
                              alpha_form = "pairwise",
                              lambda_cov_form = "none",
                              alpha_cov_form = "none",
-                             initial_values = list(lambda = 1.9,
-                                                alpha_intra = 0.1,
-                                                alpha_inter = 0.1),
+                             initial_values = list(lambda = 1.6,
+                                                alpha_intra = 0,
+                                                alpha_inter = -0.1),
                              fixed_terms = NULL,
                              # no standard errors
                               bootstrap_samples = bootN)
 
-obs.Cd_w0$lambda
-obs.Cd_w0$lambda_standard_error
-obs.Cd_w0$alpha_matrix
-obs.Cd_w0$alpha_matrix_standard_error
-obs.Cd_w0$log_likelihood
+
+
+
 
 #' 
 #' ###### Saving parameter and errors
 #' Storing data into data frames
-## ---------------------------
+## Saving parameters cadmium---------------------------
+print("Creating data frame to store mean parameter estimates for the cadmium environment")
+# First creating the data frame and initializing everything to 0
 cxr_param_REP_C<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Environment=c("Cd"))
   cxr_param_REP_C$Tu_lambda<-0
   cxr_param_REP_C$Te_lambda<-0
@@ -521,19 +546,23 @@ cxr_param_REP_C<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"
   cxr_param_REP_C$Tu_inter<-0
   cxr_param_REP_C$Te_inter<-0
   
+  # Storing the lambda values
   cxr_param_REP_C[,"Tu_lambda"]<-obs.Cd_w0$lambda[c(1,2,1,2)]
   cxr_param_REP_C[,"Te_lambda"]<-obs.Cd_w0$lambda[c(3,3,4,4)]
   
+  # Storing the intraspecific competition
   cxr_param_REP_C[,"Tu_intra"]<-rep(c(obs.Cd_w0$alpha_matrix[1,1], obs.Cd_w0$alpha_matrix[2,2]), 2)
   cxr_param_REP_C[,"Te_intra"]<-rep(c(obs.Cd_w0$alpha_matrix[3,3], obs.Cd_w0$alpha_matrix[4,4]), each=2)
   
+  # Storing the interspecific competition
   cxr_param_REP_C[,"Tu_inter"]<-c(obs.Cd_w0$alpha_matrix[1,3], obs.Cd_w0$alpha_matrix[2,3],obs.Cd_w0$alpha_matrix[1,4], obs.Cd_w0$alpha_matrix[2,4])
   cxr_param_REP_C[,"Te_inter"]<-c(obs.Cd_w0$alpha_matrix[3,1], obs.Cd_w0$alpha_matrix[3,2],obs.Cd_w0$alpha_matrix[4,1], obs.Cd_w0$alpha_matrix[4,2])
 
 #' 
 #' #### Data frame with lower estimates
-## ---------------------------
-### Here we will apply the same reasoning but now estimating the lower estimates, using the stats from cxr. Lower bounds correspond to mean-error.
+### Here we will apply the same reasoning as above, but now estimating the lower estimates, using the stats from cxr. Lower bounds correspond to mean-error.
+  print("Creating data frame to store lower parameter estimates for the cadmium environment")
+# First creating the data frame and initializing everything to 0
 cxr_param_REP_C_lower<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Environment=c("Cd"))
   cxr_param_REP_C_lower$Tu_lambda<-0
   cxr_param_REP_C_lower$Te_lambda<-0
@@ -542,22 +571,24 @@ cxr_param_REP_C_lower<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4",
   cxr_param_REP_C_lower$Tu_inter<-0
   cxr_param_REP_C_lower$Te_inter<-0
   
+  # Storing the lambda values
   cxr_param_REP_C_lower[,"Tu_lambda"]<-rep(c(obs.Cd_w0$lambda[1]-obs.Cd_w0$lambda_standard_error[1], obs.Cd_w0$lambda[2]-obs.Cd_w0$lambda_standard_error[2]), 2)
   cxr_param_REP_C_lower[,"Te_lambda"]<-rep(c(obs.Cd_w0$lambda[3]-obs.Cd_w0$lambda_standard_error[3], obs.Cd_w0$lambda[4]-obs.Cd_w0$lambda_standard_error[4]), each=2)
   
-  
+  # Storing the intraspecific competition
   cxr_param_REP_C_lower[,"Tu_intra"]<-rep(c(obs.Cd_w0$alpha_matrix[1,1]-obs.Cd_w0$alpha_matrix_standard_error[1,1], obs.Cd_w0$alpha_matrix[2,2]-obs.Cd_w0$alpha_matrix_standard_error[2,2]), 2)
   cxr_param_REP_C_lower[,"Te_intra"]<-rep(c(obs.Cd_w0$alpha_matrix[3,3]-obs.Cd_w0$alpha_matrix_standard_error[3,3], obs.Cd_w0$alpha_matrix[4,4]-obs.Cd_w0$alpha_matrix_standard_error[4,4]), each=2)
   
-  
+  # Storing the interspecific competition
   cxr_param_REP_C_lower[,"Tu_inter"]<-c(obs.Cd_w0$alpha_matrix[1,3]-obs.Cd_w0$alpha_matrix_standard_error[1,3],obs.Cd_w0$alpha_matrix[2,3]-obs.Cd_w0$alpha_matrix_standard_error[2,3],obs.Cd_w0$alpha_matrix[1,4]-obs.Cd_w0$alpha_matrix_standard_error[1,4], obs.Cd_w0$alpha_matrix[2,4]-obs.Cd_w0$alpha_matrix_standard_error[2,4])
   
   cxr_param_REP_C_lower[,"Te_inter"]<-c(obs.Cd_w0$alpha_matrix[3,1]-obs.Cd_w0$alpha_matrix_standard_error[3,1], obs.Cd_w0$alpha_matrix[3,2]-obs.Cd_w0$alpha_matrix_standard_error[3,2],obs.Cd_w0$alpha_matrix[4,1]-obs.Cd_w0$alpha_matrix_standard_error[4,1], obs.Cd_w0$alpha_matrix[4,2]-obs.Cd_w0$alpha_matrix_standard_error[4,2])
 
 #' 
 #' #### Data frame with upper estimates
-## ---------------------------
-### Here we will apply the same reasoning but now estimating the upper estimates, using the stats from cxr. Upper bounds correspond to mean-error.
+### Here we will apply the same reasoning but now estimating the upper estimates, using the stats from cxr. Upper bounds correspond to mean+error.
+print("Creating data frame to store upper parameter estimates for the cadmium environment")
+# First creating the data frame and initializing everything to 0
 cxr_param_REP_C_upper<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4", "SR5"), Environment=c("Cd"))
   cxr_param_REP_C_upper$Tu_lambda<-0
   cxr_param_REP_C_upper$Te_lambda<-0
@@ -566,13 +597,15 @@ cxr_param_REP_C_upper<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4",
   cxr_param_REP_C_upper$Tu_inter<-0
   cxr_param_REP_C_upper$Te_inter<-0
   
+  # Storing the lambda values
   cxr_param_REP_C_upper[,"Tu_lambda"]<-rep(c(obs.Cd_w0$lambda[1]+obs.Cd_w0$lambda_standard_error[1], obs.Cd_w0$lambda[2]+obs.Cd_w0$lambda_standard_error[2]), 2)
   cxr_param_REP_C_upper[,"Te_lambda"]<-rep(c(obs.Cd_w0$lambda[3]+obs.Cd_w0$lambda_standard_error[3], obs.Cd_w0$lambda[4]+obs.Cd_w0$lambda_standard_error[4]), each=2)
   
+  # Storing the intraspecific competition
   cxr_param_REP_C_upper[,"Tu_intra"]<-rep(c(obs.Cd_w0$alpha_matrix[1,1]+obs.Cd_w0$alpha_matrix_standard_error[1,1],obs.Cd_w0$alpha_matrix[2,2]+obs.Cd_w0$alpha_matrix_standard_error[2,2]), 2)
   cxr_param_REP_C_upper[,"Te_intra"]<-rep(c(obs.Cd_w0$alpha_matrix[3,3]+obs.Cd_w0$alpha_matrix_standard_error[3,3], obs.Cd_w0$alpha_matrix[4,4]+obs.Cd_w0$alpha_matrix_standard_error[4,4]), each=2)
   
-  
+  # Storing the interspecific competition
   cxr_param_REP_C_upper[,"Tu_inter"]<-c(obs.Cd_w0$alpha_matrix[1,3]+obs.Cd_w0$alpha_matrix_standard_error[1,3], obs.Cd_w0$alpha_matrix[2,3]+obs.Cd_w0$alpha_matrix_standard_error[2,3],obs.Cd_w0$alpha_matrix[1,4]+obs.Cd_w0$alpha_matrix_standard_error[1,4], obs.Cd_w0$alpha_matrix[2,4]+obs.Cd_w0$alpha_matrix_standard_error[2,4])
   cxr_param_REP_C_upper[,"Te_inter"]<-c(obs.Cd_w0$alpha_matrix[3,1]+obs.Cd_w0$alpha_matrix_standard_error[3,1], obs.Cd_w0$alpha_matrix[3,2]+obs.Cd_w0$alpha_matrix_standard_error[3,2],obs.Cd_w0$alpha_matrix[4,1]+obs.Cd_w0$alpha_matrix_standard_error[4,1], obs.Cd_w0$alpha_matrix[4,2]+obs.Cd_w0$alpha_matrix_standard_error[4,2])
   
@@ -580,36 +613,31 @@ cxr_param_REP_C_upper<-expand.grid(Tu_Regime=c("SR1", "SR2"), Te_Regime=c("SR4",
   #cxr_param_REP_C_upper
 
 #' 
-#' #### Joining the two data frames
-## ---------------------------
+#' #### Joining the two data frames from the two environments for the mean, upper and lower estimates
+## Joining no cadmium and cadmium data frames---------------------------
+  
+print("Joining data frames")
   param_all_REP<-as.data.frame(rbind(cxr_param_REP, cxr_param_REP_C))
   
   param_all_REP_lower<-as.data.frame(rbind(cxr_param_REP_lower, cxr_param_REP_C_lower))
   param_all_REP_upper<-as.data.frame(rbind(cxr_param_REP_upper, cxr_param_REP_C_upper))
   
-
+print("Saving files")
 #' 
 #' #### Saving pooled parameter estimates 
 #' 
-## ---------------------------
+## Saving estimates (Rdata)---------------------------
 ## Save the objects
-save(obs.w0, file="../Analyses/cxr_N_allEqual_best.RData")
-save(obs.Cd_w0, file="../Analyses/cxr_Cd_allEqual_best.RData")
+save(obs.w0, file="./Analyses/cxr_normal_Pooled/cxr_N_allEqual_best.RData")
+save(obs.Cd_w0, file="./Analyses/cxr_normal_Pooled/cxr_Cd_allEqual_best.RData")
 
 #' 
 #' Save the data sets to be used later
-## ---------------------------
-write.csv(param_all_REP, "../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_best.csv")
-  write.csv(param_all_REP_upper, "../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_upper_best.csv")
-  write.csv(param_all_REP_lower, "../Analyses/cxr_normal_REP_allEqual/parameters_cxr_normal_REP_lower_best.csv")
-
-
-#' 
-#' 
-#' 
-#' 
-#' 
-#' 
-#' 
-#' 
-#' 
+## Save files ---------------------------
+# Mean values
+write.csv(param_all_REP, "./Analyses/cxr_normal_Pooled/parameters_cxr_normal_Pooled.csv")
+# Upper estimates
+write.csv(param_all_REP_upper, "./Analyses/cxr_normal_Pooled/parameters_cxr_normal_Pooled_upper.csv")
+# Lower estimates
+write.csv(param_all_REP_lower, "./Analyses/cxr_normal_Pooled/parameters_cxr_normal_Pooled_lower.csv")
+ 
