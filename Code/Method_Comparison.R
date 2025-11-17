@@ -1061,12 +1061,6 @@ write.csv(param_all_w0, "./Analyses/MethodComparison/cxr_normal/parameters_cxr_n
 write.csv(param_all_w0_upper, "./Analyses/MethodComparison/cxr_normal/parameters_cxr_normal_upper.csv")
 write.csv(param_all_w0_lower, "./Analyses/MethodComparison/cxr_normal/parameters_cxr_normal_lower.csv")
 
-vector_likelihood_A<-c(obs.R1_w0$log_likelihood, obs.R3_w0$log_likelihood, obs.R4_w0$log_likelihood, obs.R5_w0$log_likelihood, obs.R2_w0_sr1$log_likelihood, obs.R2_w0_sr4$log_likelihood, obs.R2_w0_sr4_inter$log_likelihood,obs.R2_w0_sr5$log_likelihood, obs.R2_w0_sr5_inter$log_likelihood, obs.R1_Cd_w0$log_likelihood, obs.R3_Cd_w0$log_likelihood, obs.R4_Cd_w0$log_likelihood, obs.R5_Cd_w0$log_likelihood, obs.R2_Cd_w0_sr1$log_likelihood, obs.R2_Cd_w0_sr4$log_likelihood, obs.R2_Cd_w0_sr4_inter$log_likelihood,obs.R2_Cd_w0_sr5$log_likelihood, obs.R2_Cd_w0_sr5_inter$log_likelihood)
-
-likelihood_A<-mean(sapply(c(1:length(vector_likelihood_A)), function(x) mean(vector_likelihood_A[x])))
-
-print(paste("likelihood method A: ", likelihood_A, sep=" "))
-}
 
 
 # B - CXR lambda fixed --------------------
@@ -1858,13 +1852,6 @@ write.csv(param_all_B, "./Analyses/MethodComparison/cxr_lambda_fixed_log/paramet
 write.csv(param_all_B_upper, "./Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed_upper.csv")
 write.csv(param_all_B_lower, "./Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed_lower.csv")
 
-vector_likelihood_B<-c(cxr_B.R1_w0$log_likelihood, cxr_B.R3_w0$log_likelihood, cxr_B.R4_w0$log_likelihood, cxr_B.R5_w0$log_likelihood, cxr_B.R2_w0_sr1$log_likelihood, cxr_B.R2_w0_sr4$log_likelihood, cxr_B.R2_w0_sr4_inter$log_likelihood,cxr_B.R2_w0_5$log_likelihood, cxr_B.R2_w0_sr5_inter$log_likelihood, cxr_B.R1_Cd_w0$log_likelihood, cxr_B.R3_Cd_w0$log_likelihood, cxr_B.R4_Cd_w0$log_likelihood, cxr_B.R5_Cd_w0$log_likelihood, cxr_B.R2_Cd_w0_sr1$log_likelihood, cxr_B.R2_Cd_w0_sr4$log_likelihood, cxr_B.R2_Cd_w0_sr4_inter$log_likelihood,cxr_B.R2_Cd_w0_5$log_likelihood, cxr_B.R2_Cd_w0_sr5_inter$log_likelihood)
-
-likelihood_B<-mean(sapply(c(1:length(vector_likelihood_B)), function(x) mean(vector_likelihood_B[x])))
-
-
-print(paste("likelihood method B: ", likelihood_B, sep=" "))
-}
 
 # C - CXR nested --------------------
 
@@ -2765,15 +2752,6 @@ write.csv(param_all_C, "./Analyses/MethodComparison/cxr_lambda_fixed_nested/para
 write.csv(param_all_C_upper, "./Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed_upper.csv")
 write.csv(param_all_C_lower, "./Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed_lower.csv")
 
-vector_likelihood_C<-c(cxr_C.R1_intra$log_likelihood, cxr_C.R3_intra$log_likelihood, cxr_C.R4_intra$log_likelihood, cxr_C.R5_intra$log_likelihood, cxr_C.R2_intra$log_likelihood,cxr_C.R1$log_likelihood, cxr_C.R3$log_likelihood, cxr_C.R4$log_likelihood, cxr_C.R5$log_likelihood, cxr_C.R2_sr1$log_likelihood,cxr_C.R2_sr4$log_likelihood, cxr_C.R2_sr5$log_likelihood, cxr_C.R1_cd_intra$log_likelihood, cxr_C.R3_cd_intra$log_likelihood, cxr_C.R4_cd_intra$log_likelihood, cxr_C.R5_cd_intra$log_likelihood, cxr_C.R2_cd_intra$log_likelihood,cxr_C.R1_cd$log_likelihood, cxr_C.R3_cd$log_likelihood, cxr_C.R4_cd$log_likelihood, cxr_C.R5_cd$log_likelihood, cxr_C.R2_cd_sr1$log_likelihood,cxr_C.R2_cd_sr4$log_likelihood, cxr_C.R2_cd_sr5$log_likelihood  )
-
-likelihood_C<-mean(sapply(c(1:length(vector_likelihood_C)), function(x) mean(vector_likelihood_C[x])))
-
-
-print(paste("likelihood method C: ", likelihood_C, sep=" "))
-
-}
-
 # D - optim normal ------
 
 ##### Estimating parameters
@@ -3093,14 +3071,8 @@ alphas_mat_D<-alphas_mat_D[,c(1:8, 13:16,21:30)]
 
 str(alphas_mat_D)
 
-
-
 colnames(alphas_mat_D)<-c("Tu_Regime", "Te_Regime", "Environment", "Replicate", "Tu_intra", "Te_intra", "Tu_inter", "Te_inter", "Tu_intra_L", "Te_intra_L", "Tu_inter_L", "Te_inter_L", "Tu_intra_U", "Te_intra_U", "Tu_inter_U", "Te_inter_U", "Tu_lambda", "Te_lambda","Tu_lambda_L", "Te_lambda_L","Tu_lambda_U", "Te_lambda_U")
 
-
-likelihood_D<-mean(as.numeric(lapply(c(1:length(lambda_list)), function(x) mean(lambda_list[[x]][,"likelihood"]))))
-
-print(paste("likelihood method D: ", likelihood_D, sep=" "))
 
 # E - optim lambda fixed ---------
 print("Running Method E: Optim nested with lambda fixed")
@@ -3417,10 +3389,6 @@ alphas_mat_E$Env2<-mapvalues(alphas_mat_E$Env, c("C","N"), c("Cd","N"))
 alphas_mat_E<-alphas_mat_E[,c(1:8, 13:16,21:30)]
 
 colnames(alphas_mat_E)<-c("Tu_Regime", "Te_Regime", "Environment", "Replicate", "Tu_intra", "Te_intra", "Tu_inter", "Te_inter", "Tu_intra_L", "Te_intra_L", "Tu_inter_L", "Te_inter_L", "Tu_intra_U", "Te_intra_U", "Tu_inter_U", "Te_inter_U", "Tu_lambda", "Te_lambda","Tu_lambda_L", "Te_lambda_L","Tu_lambda_U", "Te_lambda_U")
-
-likelihood_E<-mean(as.numeric(lapply(c(1:length(lambda_list)), function(x) mean(lambda_list[[x]][,"convergence_code"]))))
-
-print(paste("likelihood method E: ", likelihood_E, sep=" "))
 
 #################################################'
 # Compare methods----
