@@ -9,6 +9,7 @@ The Data folder contains the raw data
 The Code folder contains the scripts to perform the analyses
 The Analyses folder contains intermediate outputs required for the analyses.
 The Plots folder contains the figures used in the manuscript (output from the code)
+The html folder contains the html output of the Main_analyses.R and Figures.R scripts
 
 Inside each folder there is a ReadMe file explaining the different files and folder available.
 

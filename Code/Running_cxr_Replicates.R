@@ -203,7 +203,7 @@ ca$GrowthRateOA<-sapply(c(1:length(ca[,1])), function(x){
 ## 
 set.seed(1809)
 bootN<-2000
-eval<- TRUE
+
 
 # Creating directory to store the results
 # If the directory does not exist create it 
@@ -426,9 +426,9 @@ Rep_R1_Cd<-list(SR1= subset(forCXR_Cd, Rep==1 & Focal=="SR1")[,c("fitness", "SR1
 #' Creating a data frame with the initial values. The values to use have been tested in the parameter exploration code file.
 replicates_initial<-as.data.frame(expand.grid(Replicates=c(1,2,3,4,5), Environment=c("N", "Cd"), lambda=0, alpha_intra=0, alpha_inter=0))
 
-replicates_initial$lambda<-1.1001
-replicates_initial$alpha_intra<- 0
-replicates_initial$alpha_inter<- -0.1
+replicates_initial$lambda<-0.9
+replicates_initial$alpha_intra<- -0.1
+replicates_initial$alpha_inter<- 0
 
 #' 
 #' # Running cxr for the no cadmium environment

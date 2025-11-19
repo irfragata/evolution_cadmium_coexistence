@@ -45,6 +45,17 @@
   library(cxr)
   library(MASS)
   library(plyr)
+  
+  rssq_function<-function(df, lambda, alpha_intra, alpha_inter,... ){
+    pred<-sapply(c(1:nrow(df)), function(a){
+      m<-lambda*exp(-alpha_intra*df[a,2]-alpha_inter*df[a,3])
+      # Estimating the diff between predicted and observed
+      re<-(m-df[a,1])^2
+      
+      re
+    })
+    return(sum(pred))
+  }
   #' 
   #' WARNING: This code takes a large amount of time to run. It is provided not as part of the main analyses, but to show how the initial parameter values were selected.
   #' 
@@ -183,7 +194,9 @@
   #' Some pieces of the code take a lot of time to run. We provide the intermediate results to speed up the process. To run the whole code change eval from FALSE to TRUE.
   #' 
   # Evaluation------------------------------------
-  evaluation<-FALSE
+  
+  evaluation <- FALSE
+  evaluation2<- FALSE
   if(!file.exists("./Analyses")){
     dir.create("./Analyses/")
   }
@@ -955,7 +968,6 @@ if(evaluation){
   }
   
   
-  
   #' 
   #' 
   # Model selection------
@@ -983,21 +995,13 @@ if(evaluation){
   colnames(pooled_N)[6:7]<-c("lambda_SR4","lambda_SR5")
   colnames(pooled_Cd)[6:7]<-c("lambda_SR4","lambda_SR5")
   #' 
-  ### Estimating root mean squared error (RMSE) ------------------------------------
+  # Estimating root mean squared error (RMSE) ------------------------------------
   # Creates a function that estimates the residual mean sum of squares between the predicted data and the observed
-  
- if(evaluation){
-  rssq_function<-function(df, lambda, alpha_intra, alpha_inter,... ){
-    pred<-sapply(c(1:nrow(df)), function(a){
-      m<-lambda*exp(-alpha_intra*df[a,2]-alpha_inter*df[a,3])
-      # Estimating the diff between predicted and observed
-      re<-(m-df[a,1])^2
-      
-      re
-    })
-    return(sum(pred))
-  }
-  
+print(evaluation)
+ 
+if(!evaluation2){
+  load(file='./Analyses/Parameter_exploration_RMSE.RData')
+}else{
   print("Estimate root mean square error for pooled data")
   
   pooled_N$RMSE_SR1<-sapply(c(1:nrow(pooled_N)), function(x){
@@ -1016,7 +1020,7 @@ if(evaluation){
     rssq_function(Rep[[4]][,c("fitness","SR5","SR1")], pooled_N$lambda_SR5[x], pooled_N$intra_SR5[x],pooled_N$inter_SR5.SR1[x])+rssq_function(Rep[[4]][,c("fitness","SR5","SR2")], pooled_N$lambda_SR5[x], pooled_N$intra_SR5[x],pooled_N$inter_SR5.SR2[x])
   })
   
-  ### Pooled Cd
+  #' ## Pooled Cd
   
   pooled_Cd$RMSE_SR1<-sapply(c(1:nrow(pooled_Cd)), function(x){
     rssq_function(Rep_Cd[[1]][,c("fitness","SR1","SR4")], pooled_Cd$lambda_SR1[x], pooled_Cd$intra_SR1[x],pooled_Cd$inter_SR1.SR4[x])+rssq_function(Rep_Cd[[1]][,c("fitness","SR1","SR5")], pooled_Cd$lambda_SR1[x], pooled_Cd$intra_SR1[x],pooled_Cd$inter_SR1.SR5[x])
@@ -1034,7 +1038,7 @@ if(evaluation){
     rssq_function(Rep_Cd[[4]][,c("fitness","SR5","SR1")], pooled_Cd$lambda_SR5[x], pooled_Cd$intra_SR5[x],pooled_Cd$inter_SR5.SR1[x])+rssq_function(Rep_Cd[[4]][,c("fitness","SR5","SR2")], pooled_Cd$lambda_SR5[x], pooled_Cd$intra_SR5[x],pooled_Cd$inter_SR5.SR2[x])
   })
   
-  # Estimate the sum or mean of RMSE
+  #' Estimate the sum or mean of RMSE
   
   pooled_N$Sum_RMSE<-sapply(c(1:nrow(pooled_N)), function(x) sum(c(pooled_N$RMSE_SR1[x],pooled_N$RMSE_SR2[x],pooled_N$RMSE_SR4[x],pooled_N$RMSE_SR5[x])))
   
@@ -1044,8 +1048,8 @@ if(evaluation){
   
   pooled_Cd$Mean_RMSE<-sapply(c(1:nrow(pooled_Cd)), function(x) mean(c(pooled_Cd$RMSE_SR1[x],pooled_Cd$RMSE_SR2[x],pooled_Cd$RMSE_SR4[x],pooled_Cd$RMSE_SR5[x])))
   
-  # Using the mean or the sum renders the same best
-  # However the estimates for alpha and lambda show a large variation, specially in the cadmium environment.
+  #' Using the mean or the sum renders the same best
+  #' However the estimates for alpha and lambda show a large variation, specially in the cadmium environment.
   head(pooled_N[order(pooled_N$Sum_RMSE, decreasing=FALSE),], n=10)
   head(pooled_N[order(pooled_N$Mean_RMSE, decreasing=FALSE),], n=10)
   
@@ -1054,7 +1058,8 @@ if(evaluation){
   
   
   #' 
-  ## Estimating mean likelihood and RMSE for each Replicate ------------------------------------
+  # Estimating mean likelihood and RMSE for each Replicate ------------------------------------
+  
   # colnames(R1_N)[6:7]<-c("lambda_SR4","lambda_SR5")
   # colnames(R1_Cd)[6:7]<-c("lambda_SR4","lambda_SR5")
   # colnames(R2_N)[6:7]<-c("lambda_SR4","lambda_SR5")
@@ -1091,7 +1096,7 @@ if(evaluation){
   
   
   #' 
-  ### Estimating root mean squared error (RMSE)------
+  # Estimating root mean squared error (RMSE)------
   #' 
   ##### Replicate 1 ------------------------------------
   
@@ -1370,8 +1375,6 @@ if(evaluation){
   #' 
   ### Save or load------
     save.image(file='./Analyses/Parameter_exploration_RMSE.RData')
-  }else{
-    load(file='./Analyses/Parameter_exploration_RMSE.RData') 
   }
 
   #' 
@@ -1453,41 +1456,36 @@ if(evaluation){
   # Again very similar values, similar to the pooled estimates we will use the N estimates
   
   
-  best_pooledCd
-  best_pooledN
-  best_replicates
+   best_pooledCd
+   best_pooledN
+   best_replicates
   
   # See the parameter values that correspond to the best estimate to see if there are large differences between the two
   
   # For the non-cadmium environment
   subset(R1_N, lambda==best_replicates$lambda & alpha_intra==best_replicates$alpha_intra & alpha_inter==best_replicates$alpha_inter)
-  
+
   subset(R2_N, lambda==best_replicates$lambda & alpha_intra==best_replicates$alpha_intra & alpha_inter==best_replicates$alpha_inter)
-  
+
   subset(R3_N, lambda==best_replicates$lambda & alpha_intra==best_replicates$alpha_intra & alpha_inter==best_replicates$alpha_inter)
-  
+
   subset(R4_N, lambda==best_replicates$lambda & alpha_intra==best_replicates$alpha_intra & alpha_inter==best_replicates$alpha_inter)
-  
+
   subset(R5_N, lambda==best_replicates$lambda & alpha_intra==best_replicates$alpha_intra & alpha_inter==best_replicates$alpha_inter)
-  
+
   # For the cadmium environment
   subset(R1_Cd, lambda==best_replicates$lambda & alpha_intra==best_replicates$alpha_intra & alpha_inter==best_replicates$alpha_inter)
-  
+
   subset(R2_Cd, lambda==best_replicates$lambda & alpha_intra==best_replicates$alpha_intra & alpha_inter==best_replicates$alpha_inter)
-  
+
   subset(R3_Cd, lambda==best_replicates$lambda & alpha_intra==best_replicates$alpha_intra & alpha_inter==best_replicates$alpha_inter)
-  
+
   subset(R4_Cd, lambda==best_replicates$lambda & alpha_intra==best_replicates$alpha_intra & alpha_inter==best_replicates$alpha_inter)
-  
+
   subset(R5_Cd, lambda==best_replicates$lambda & alpha_intra==best_replicates$alpha_intra & alpha_inter==best_replicates$alpha_inter)
+
   
-  # Best is 1.1001, 0.0, -0.1
   
-  # Printing final value
-  
-  print(paste("Final parameter values for pooled data, lambda:", best_pooledN$lambda[1], ", alpha intraspecific:",best_pooledN$alpha_intra[1], ", alpha interspecific:", best_pooledN$alpha_inter[1], sep=" " ))
-  
-  print(paste("Final parameter values for replicate data, lambda:", best_replicates$lambda[1], ", alpha intraspecific:",best_pooledN$alpha_intra[1], ", alpha interspecific:", best_pooledN$alpha_inter[1], sep=" " ))
   #' 
   #' 
   #' 

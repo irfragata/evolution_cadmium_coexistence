@@ -83,7 +83,7 @@ Nboot <- 2
 #' Some pieces of the code take a lot of time to run. We provide the intermediate results to speed up the process. To run the whole code change eval from FALSE to TRUE.
 #' 
 # Evaluation------------------------------------
-eval<-TRUE
+eval<-FALSE
 if(!dir.exists("./Analyses")){
   dir.create("./Analyses/")
 }
@@ -1061,7 +1061,7 @@ write.csv(param_all_w0, "./Analyses/MethodComparison/cxr_normal/parameters_cxr_n
 write.csv(param_all_w0_upper, "./Analyses/MethodComparison/cxr_normal/parameters_cxr_normal_upper.csv")
 write.csv(param_all_w0_lower, "./Analyses/MethodComparison/cxr_normal/parameters_cxr_normal_lower.csv")
 
-
+}
 
 # B - CXR lambda fixed --------------------
 ### 
@@ -1851,7 +1851,7 @@ param_all_B_upper<-as.data.frame(rbind(cxr_param_B_upper, cxr_param_BC_upper))
 write.csv(param_all_B, "./Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed.csv")
 write.csv(param_all_B_upper, "./Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed_upper.csv")
 write.csv(param_all_B_lower, "./Analyses/MethodComparison/cxr_lambda_fixed_log/parameters_cxr_lambda_fixed_lower.csv")
-
+}
 
 # C - CXR nested --------------------
 
@@ -2751,7 +2751,7 @@ param_all_C_upper<-as.data.frame(rbind(cxr_param_C_upper, cxr_param_CC_upper))
 write.csv(param_all_C, "./Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed.csv")
 write.csv(param_all_C_upper, "./Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed_upper.csv")
 write.csv(param_all_C_lower, "./Analyses/MethodComparison/cxr_lambda_fixed_nested/parameters_cxr_lambda_fixed_lower.csv")
-
+}
 # D - optim normal ------
 
 ##### Estimating parameters

@@ -130,7 +130,7 @@ names(regimeTe)<-c("SR4", "SR5")
 #' Some pieces of the code take a lot of time to run. We provide the intermediate results to speed up the process. To run the whole code change eval from FALSE to TRUE.
 #' 
 # Evaluation------------------------------------
-evaluation<-FALSE
+evaluation<-TRUE
 if(!file.exists("./Analyses")){
   dir.create("./Analyses/")
 }
@@ -699,7 +699,7 @@ if(!evaluation){
 #' ### Does cadmium change parameters?
 #' #### Tu
 #' 
-
+#+ eval=FALSE
 if(evaluation){
 #Bootstrap to reestimate the p-value obtained for growth rate and intraspecific competition.
 boot_tu_gr_intra_env<-as.data.frame(t(sapply(c(1:nboot),function(x){
@@ -740,9 +740,9 @@ boot_tu_gr_intra_env<-as.data.frame(t(sapply(c(1:nboot),function(x){
 } )))}
 
 #' 
-#' #### Te
+#'
 #' 
-
+#+ eval=FALSE
 if(evaluation){
 #Bootstrap to reestimate the p-value obtained for growth rate and intraspecific competition.
 boot_te_gr_intra_env<-as.data.frame(t(sapply(c(1:nboot),function(x){
@@ -824,9 +824,9 @@ length(which(boot_te_gr_intra_env$inter_p<=as.data.frame(Anova(inter_te_cd_1))[,
 #' 
 #' 
 #' ### Does evolution change the performance in cadmium?
-#' #### Tu
 #' 
-
+#' 
+#+ eval=FALSE
 if(evaluation){
 #Bootstrap to reestimate the p-value obtained for growth rate and intraspecific competition to test if evoution affected the performance in cadmium
 boot_tu_evolcd<-as.data.frame(t(sapply(c(1:nboot),function(x){
@@ -882,9 +882,9 @@ boot_tu_evolcd<-as.data.frame(t(sapply(c(1:nboot),function(x){
 }
 
 #' 
-#' #### Te
+#'
 #' 
-
+#+ eval=FALSE
 if(evaluation){
 #Bootstrap to reestimate the p-value obtained for growth rate and intraspecific competition to test if evoution affected the performance in cadmium. For T. evansi
 boot_te_evolcd<-as.data.frame(t(sapply(c(1:nboot),function(x){
@@ -984,9 +984,9 @@ length(which(boot_te_evolcd$inter_p_int<=as.data.frame(Anova(inter_te_ev_1))[3,3
 #' 
 #' ### Does evolution change the ancestral?
 #' 
-#' #### Tu
+#'
 #' 
-
+#+ eval=FALSE
 if(evaluation){
 #Bootstrap to reestimate the p-value obtained for growth rate and intraspecific competition to test if evoution affected the performance in the ancestral environment
 boot_tu_evolN<-as.data.frame(t(sapply(c(1:nboot),function(x){
@@ -1042,9 +1042,9 @@ boot_tu_evolN<-as.data.frame(t(sapply(c(1:nboot),function(x){
 }
 
 #' 
-#' #### Te
+#'
 #' 
-
+#+ eval=FALSE
 if(evaluation){
 #Bootstrap to reestimate the p-value obtained for growth rate and intraspecific competition to test if evoution affected the performance in the ancestral environment. for Te
 boot_te_evolN<-as.data.frame(t(sapply(c(1:nboot),function(x){
@@ -2115,6 +2115,7 @@ test(emtrends(m7, var="pred_T1", type="response"))
 if(evaluation){
 write.csv(sum_observed_coex_rep, file="./Analyses/popDyn_pooledData.csv")
 }
+print(paste("Slope pooled:", round(log(coefficients(summary(m7))$cond[1]),3), sep=" "))
 
 #' 
 #' #### Testing per replicate
@@ -2134,7 +2135,7 @@ summary(m7_rep2)
 emtrends(m7_rep2, var="mean_pred", type="response")
 test(emtrends(m7_rep2, var="mean_pred", type="response"))
 
-print(paste("Slope:", round(log(coefficients(summary(m7_rep2))$cond[1]),3), sep=" "))
+print(paste("Slope replicates:", round(log(coefficients(summary(m7_rep2))$cond[1]),3), sep=" "))
 #' 
 #' 
 #' 
